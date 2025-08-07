@@ -2,8 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
-    alias(libs.plugins.ksp)
-}
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"}
 
 android {
     namespace = "com.hul0.mindflow"
@@ -14,8 +13,8 @@ android {
 
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

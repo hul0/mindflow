@@ -2,11 +2,13 @@
 package com.hul0.mindflow.data
 
 import com.hul0.mindflow.model.FunFact
+import kotlinx.coroutines.flow.firstOrNull
 
 class FunFactRepository(private val funFactDao: FunFactDao) {
     suspend fun getRandomFunFact(): FunFact? {
-        // In a real app, you'd fetch these from an API or a prepopulated database
-        if (funFactDao.getAllFunFacts().kotlinx.coroutines.flow.firstOrNull().isNullOrEmpty()) {
+        // Check if the database is empty before trying to insert initial data.
+        // We use firstOrNull() to get the first emission from the Flow, which is the current list of facts.
+        if (funFactDao.getAllFunFacts().firstOrNull().isNullOrEmpty()) {
             val facts = listOf(
                 FunFact(1, "Honey never spoils."),
                 FunFact(2, "A group of flamingos is called a 'flamboyance'."),
@@ -16,6 +18,7 @@ class FunFactRepository(private val funFactDao: FunFactDao) {
             )
             funFactDao.insertAll(facts)
         }
+        // Return a random fact from the database.
         return funFactDao.getRandomFunFact()
     }
 }
