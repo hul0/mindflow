@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,18 +21,17 @@ import com.hul0.mindflow.model.Quote
 fun QuoteCard(quote: Quote, isFavorite: Boolean, onFavoriteClick: () -> Unit) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "\"${quote.name}\"",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Normal,
+                style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 24.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 12.dp)
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -40,17 +40,20 @@ fun QuoteCard(quote: Quote, isFavorite: Boolean, onFavoriteClick: () -> Unit) {
             ) {
                 Text(
                     text = "— ${quote.quotedBy}",
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (isFavorite) Color.Red else LocalContentColor.current,
+                    tint = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .size(24.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .clickable { onFavoriteClick() }
+                        .padding(2.dp) // clickable padding
                 )
             }
         }
