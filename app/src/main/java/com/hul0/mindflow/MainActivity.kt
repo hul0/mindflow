@@ -1,15 +1,16 @@
-// app/src/main/java/com/hul0/mindflow/MainActivity.kt
 package com.hul0.mindflow
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.ads.MobileAds
 import com.hul0.mindflow.navigation.AppNavigation
+import com.hul0.mindflow.ui.components.BottomNavigationBar
 import com.hul0.mindflow.ui.theme.MindFlowTheme
 
 class MainActivity : ComponentActivity() {
@@ -21,14 +22,21 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MindFlowTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    AppNavigation()
-                }
+                MainScreen()
             }
         }
+    }
+}
+
+@Composable
+fun MainScreen() {
+    val navController = rememberNavController()
+    Scaffold(
+        bottomBar = { BottomNavigationBar(navController = navController) }
+    ) { innerPadding ->
+        AppNavigation(
+            navController = navController,
+            modifier = Modifier.padding(innerPadding)
+        )
     }
 }
