@@ -5,16 +5,16 @@ plugins {
 }
 
 android {
-    namespace = "com.hulo.qrgenapp"
+    namespace = "com.hul0.mindflow"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.hulo.qrgenapp"
+        applicationId = "com.hul0.mindflow"
 
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -31,6 +31,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -85,8 +86,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("com.google.android.play:app-update:2.1.0")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
+
 // Use the latest stable version if available
     // Jetpack Compose - The UI toolkit for the app
     implementation(platform("androidx.compose:compose-bom:2025.06.01"))
@@ -98,26 +98,20 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.google.guava:guava:33.4.8-jre")
 
     // Google Mobile Ads (AdMob)
-    implementation("com.google.android.gms:play-services-ads:24.4.0")
+    implementation("com.google.android.gms:play-services-ads:24.5.0")
 
-    // QR Code Generation (ZXing - Zebra Crossing)
-    implementation("com.google.zxing:core:3.5.3")
 
-    // CameraX for Camera Operations
-    val cameraxVersion = "1.4.2"
-    implementation("androidx.camera:camera-core:${cameraxVersion}")
-    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
-    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
-    implementation("androidx.camera:camera-view:${cameraxVersion}")
-
-    // ML Kit for Barcode (QR Code) Scanning
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
-
-    // MultiDex
     implementation("androidx.multidex:multidex:2.0.1")
+
+
+    // ViewModel
+
+    // Room Database
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+    annotationProcessor("androidx.room:room-compiler:2.7.2")
 
 
     // Testing Dependencies

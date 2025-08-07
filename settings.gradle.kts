@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QR Scanner & Generator - QRWiz"
+rootProject.name = "Mindflow - Quotes , Motivation , Wisdom"
 include(":app")
