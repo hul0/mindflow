@@ -7,20 +7,21 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.7.1"
 material = "1.12.0" # Your version was fine
+ksp = "2.2.0-2.0.2"
 
 # Compose
-composeBom = "2025.06.01" # Stable BOM compatible with Kotlin 2.0.0 and Compiler 1.5.11
+composeBom = "2025.07.00" # Stable BOM compatible with Kotlin 2.0.0 and Compiler 1.5.11
 # For Kotlin 2.0.0, composeCompilerExtension is typically 1.5.11
 # If you stick strictly to Kotlin 2.0.21, you might need a newer BOM and compiler extension.
 # E.g., for Kotlin 2.0.0, use compose.compiler version 1.5.11. For Kotlin 2.0.20, use 1.5.13.
 # The BOM 2024.06.00 aligns with Compose Compiler 1.5.11 (Kotlin 2.0.0)
 
 activityCompose = "1.10.1"
-navigationCompose = "2.9.1" # Your version
-lifecycleViewmodelCompose = "2.9.1"
+navigationCompose = "2.9.3" # Your version
+lifecycleViewmodelCompose = "2.9.2"
 
 # Google Mobile Ads
-playServicesAds = "24.4.0"
+playServicesAds = "24.5.0"
 
 # ZXing
 zxingCore = "3.5.3"
@@ -71,9 +72,11 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
-
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 # Added Compose Compiler plugin, uses the same Kotlin version
 kotlin-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+

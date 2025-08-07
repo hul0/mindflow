@@ -7,15 +7,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hul0.mindflow.MindFlowApp
 import com.hul0.mindflow.model.MoodEntry
 import com.hul0.mindflow.ui.viewmodel.MoodTrackerViewModel
+import com.hul0.mindflow.ui.viewmodel.ViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun MoodTrackerScreen(moodViewModel: MoodTrackerViewModel = viewModel()) {
+fun MoodTrackerScreen() {
+    val application = LocalContext.current.applicationContext as MindFlowApp
+    // THE FIX: Pass both DAOs to the factory constructor
+    val factory = ViewModelFactory(application.database.quoteDao(), application.database.moodDao())
+    val moodViewModel: MoodTrackerViewModel = viewModel(factory = factory)
+
     var mood by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     val moodHistory by moodViewModel.moodHistory.collectAsState()
@@ -45,7 +53,6 @@ fun MoodTrackerScreen(moodViewModel: MoodTrackerViewModel = viewModel()) {
         Button(
             onClick = {
                 moodViewModel.addMood(mood, note)
-                // Clear fields after adding
                 mood = ""
                 note = ""
             },

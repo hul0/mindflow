@@ -22,7 +22,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544/6300978111" /> <!-- Using a test ID for safety -->
+            android:value="ca-app-pub-6055256286531369~3082276488" /> <!-- Using a test ID for safety -->
 
         <activity
             android:name=".MainActivity"
