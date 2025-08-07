@@ -1,34 +1,36 @@
+// app/src/main/java/com/hul0/mindflow/ui/viewmodel/QuotesViewModel.kt
 package com.hul0.mindflow.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.hul0.mindflow.data.QuoteDao
+import androidx.lifecycle.*
+import com.hul0.mindflow.data.QuotesRepository
 import com.hul0.mindflow.model.Quote
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// No longer needs to be an AndroidViewModel. We pass the dependency directly.
-class QuotesViewModel(private val quoteDao: QuoteDao) : ViewModel() {
+/**
+ * The ViewModel for the Quotes screen.
+ * It holds the UI state for the screen and handles business logic.
+ * It interacts with the QuotesRepository to get and update data,
+ * but it has no knowledge of the underlying data source (database, network, etc.).
+ *
+ * @param repository The repository that this ViewModel will use for data operations.
+ */
+class QuotesViewModel(private val repository: QuotesRepository) : ViewModel() {
 
-    val allQuotes = quoteDao.getAllQuotes()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000L),
-            initialValue = emptyList()
-        )
+    // Using asLiveData() to convert the Flow from the repository into LiveData.
+    // The UI will observe this LiveData for changes.
+    val allQuotes: LiveData<List<Quote>> = repository.getAllQuotes().asLiveData()
+    val favoriteQuotes: LiveData<List<Quote>> = repository.getFavoriteQuotes().asLiveData()
 
-    val favoriteQuotes = quoteDao.getFavoriteQuotes()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000L),
-            initialValue = emptyList()
-        )
-
-    fun toggleFavorite(quote: Quote) {
+    /**
+     * Updates a quote's favorite status.
+     * This function is called from the UI. It launches a coroutine in the
+     * viewModelScope to call the repository's suspend function.
+     *
+     * @param quote The quote to be updated.
+     */
+    fun updateQuote(quote: Quote) {
         viewModelScope.launch {
-            val updatedQuote = quote.copy(isFavorite = !quote.isFavorite)
-            quoteDao.updateQuote(updatedQuote)
+            repository.updateQuote(quote)
         }
     }
 }

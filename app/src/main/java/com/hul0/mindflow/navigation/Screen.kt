@@ -1,15 +1,16 @@
+// app/src/main/java/com/hul0/mindflow/navigation/Screen.kt
 package com.hul0.mindflow.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.ui.graphics.vector.ImageVector
-
-sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Home : Screen("home", "Home", Icons.Default.Home)
-    object Quotes : Screen("quotes", "Quotes", Icons.Default.FormatQuote)
-    object MoodTracker : Screen("mood_tracker", "Mood", Icons.Default.Face)
-    object Meditation : Screen("meditation", "Meditate", Icons.Default.SelfImprovement)
+sealed class Screen(val route: String) {
+    object Home : Screen("home")
+    object Quotes : Screen("quotes")
+    object Meditation : Screen("meditation")
+    object MoodTracker : Screen("mood_tracker")
+    object Todo : Screen("todo")
+    object SleepTracker : Screen("sleep_tracker")
+    object Journal : Screen("journal")
+    object FunFacts : Screen("fun_facts")
+    object MentalHealthTips : Screen("mental_health_tips")
+    object BmiCalculator : Screen("bmi_calculator")
+    object Breathwork : Screen("breathwork")
 }
