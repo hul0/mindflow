@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+/app/release/app-release.aab
+/.idea/appInsightsSettings.xml
+/app/src/test/java/com/hul0/mindflow/ExampleUnitTest.kt
+/app/src/androidTest/java/com/hul0/mindflow/ExampleInstrumentedTest.kt
