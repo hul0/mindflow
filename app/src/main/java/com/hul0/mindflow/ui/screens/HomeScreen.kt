@@ -114,6 +114,7 @@ fun HomeScreen(navController: NavController) {
             "Still up? You legend! 🌟",
             "Midnight wellness check! 🌙",
             "Late night, big dreams!",
+            "Hello Batman",
             "Burning the midnight oil? 🕯️",
             "Night time = Me time!"
         )

@@ -8,6 +8,7 @@
       1. Set the android:name to our new custom Application class.
       2. Removed the FileProvider, as it's not used and can cause issues if misconfigured.
     -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <application
         android:name=".MindFlowApp"
         android:allowBackup="true"
