@@ -1,4 +1,3 @@
-// app/src/main/java/com/hul0/mindflow/ui/components/BottomNavigationBar.kt
 package com.hul0.mindflow.ui.components
 
 import androidx.compose.animation.animateColorAsState
@@ -43,40 +42,53 @@ fun BottomNavigationBar(navController: NavController) {
         Screen.Profile
     )
 
-    // A single Surface container with the new clean, bordered style.
-    Surface(
+    // A Box that provides padding around the navbar.
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        Row(
+        // The main container Surface. It clips the content, draws the border,
+        // and provides the main background color.
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp) // Adjusted height
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround, // Use SpaceAround for better spacing
-            verticalAlignment = Alignment.CenterVertically
+                .height(72.dp),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
+            // Layer 1: The main background color of the navigation bar.
+            color = MaterialTheme.colorScheme.surface
         ) {
-            bottomNavItems.forEach { screen ->
-                val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                BottomNavItem(
-                    screen = screen,
-                    isSelected = isSelected,
-                    onClick = {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+            // The content (icons and text).
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Layer 2: A very subtle overlay on top of the Surface color
+                    // to help separate the items from the background.
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                bottomNavItems.forEach { screen ->
+                    val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                    BottomNavItem(
+                        screen = screen,
+                        isSelected = isSelected,
+                        onClick = {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun BottomNavItem(
@@ -87,7 +99,6 @@ fun BottomNavItem(
     var isPressed by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
 
-    // Simplified scale animation for a subtle press effect.
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.90f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
@@ -100,7 +111,6 @@ fun BottomNavItem(
         label = "itemColor"
     )
 
-    // Animate the background color of the selected item's indicator.
     val indicatorColor by animateColorAsState(
         targetValue = if (isSelected) getNavItemColor(screen).copy(alpha = 0.15f) else Color.Transparent,
         animationSpec = tween(300, easing = FastOutSlowInEasing),
@@ -135,8 +145,6 @@ fun BottomNavItem(
                 tint = itemColor
             )
 
-            // Text is now always visible to maintain size consistency.
-            // Its style changes based on the selection state.
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = screen.title,
@@ -149,7 +157,6 @@ fun BottomNavItem(
         }
     }
 
-    // Reset press state after animation for the click feedback.
     LaunchedEffect(isPressed) {
         if (isPressed) {
             delay(150)
@@ -158,7 +165,6 @@ fun BottomNavItem(
     }
 }
 
-// Helper to provide a unique color for each navigation item's selected state.
 @Composable
 private fun getNavItemColor(screen: Screen): Color {
     return when (screen.route) {

@@ -1,5 +1,7 @@
 package com.hul0.mindflow.navigation
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -8,11 +10,11 @@ import androidx.navigation.compose.composable
 import com.hul0.mindflow.ui.screens.*
 
 @Composable
-fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifier) {
+fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifier , paddingValues: PaddingValues) {
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
-        modifier = modifier
+        modifier = modifier.padding(paddingValues)
     ) {
         composable(Screen.Home.route) { HomeScreen(navController) }
         composable(Screen.Quotes.route) { QuotesScreen() }
