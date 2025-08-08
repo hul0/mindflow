@@ -1,4 +1,3 @@
-// app/src/main/java/com/hul0/mindflow/ui/viewmodel/ViewModelFactory.kt
 package com.hul0.mindflow.ui.viewmodel
 
 import android.app.Application
@@ -20,10 +19,8 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
         // Check which ViewModel needs to be created and provide its dependencies.
         return when {
             modelClass.isAssignableFrom(QuotesViewModel::class.java) -> {
-                // Create QuotesRepository with its QuoteDao dependency.
                 val repo = QuotesRepository(db.quoteDao())
-                // Create QuotesViewModel with the repository.
-                QuotesViewModel(repo) as T // <-- This line is now corrected
+                QuotesViewModel(repo) as T
             }
             modelClass.isAssignableFrom(MoodTrackerViewModel::class.java) -> {
                 MoodTrackerViewModel(db.moodDao()) as T
@@ -53,6 +50,10 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(BreathworkViewModel::class.java) -> {
                 BreathworkViewModel() as T
+            }
+            modelClass.isAssignableFrom(ProfileViewModel::class.java) -> {
+                val repo = UserProfileRepository(db.userProfileDao())
+                ProfileViewModel(repo) as T
             }
             // If the ViewModel class is unknown, throw an exception.
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

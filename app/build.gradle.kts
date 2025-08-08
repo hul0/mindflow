@@ -103,7 +103,7 @@ dependencies {
 
     // Google Mobile Ads (AdMob)
     implementation("com.google.android.gms:play-services-ads:24.5.0")
-
+    implementation("com.opencsv:opencsv:5.12.0")
 
     implementation("androidx.multidex:multidex:2.0.1")
 

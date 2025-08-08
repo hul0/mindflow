@@ -25,5 +25,7 @@ fun AppNavigation(navController: NavHostController, modifier: Modifier = Modifie
         composable(Screen.MentalHealthTips.route) { MentalHealthTipsScreen() }
         composable(Screen.BmiCalculator.route) { BmiCalculatorScreen() }
         composable(Screen.Breathwork.route) { BreathworkScreen() }
+        composable(Screen.Profile.route) { ProfileScreen() } // Added route for ProfileScreen
+
     }
 }

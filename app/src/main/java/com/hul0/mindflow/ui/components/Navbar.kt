@@ -37,7 +37,8 @@ fun BottomNavigationBar(navController: NavController) {
         Screen.Home,
         Screen.Quotes,
         Screen.MoodTracker,
-        Screen.Meditation
+        Screen.Meditation,
+        Screen.Profile
     )
 
     // Floating animation for the nav bar

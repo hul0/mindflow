@@ -1,4 +1,3 @@
-// app/src/main/java/com/hul0/mindflow/data/AppDatabase.kt
 package com.hul0.mindflow.data
 
 import android.content.Context
@@ -8,23 +7,43 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.hul0.mindflow.model.*
 
-@Database(entities = [Quote::class, MoodEntry::class, TodoItem::class, SleepSession::class, JournalEntry::class, FunFact::class, MentalHealthTip::class], version = 2, exportSchema = false)
+/**
+ * The main database class for the application.
+ * It defines the entities and provides access to the DAOs.
+ */
+@Database(entities = [
+    Quote::class,
+    FunFact::class,
+    MentalHealthTip::class,
+    JournalEntry::class,
+    MoodEntry::class,
+    SleepSession::class,
+    TodoItem::class,
+    UserProfile::class // Added UserProfile entity
+], version = 3, exportSchema = false) // Incremented version number
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
+    // DAOs for each entity
     abstract fun quoteDao(): QuoteDao
-    abstract fun moodDao(): MoodDao
-    abstract fun todoDao(): TodoDao
-    abstract fun sleepDao(): SleepDao
-    abstract fun journalDao(): JournalDao
     abstract fun funFactDao(): FunFactDao
     abstract fun mentalHealthTipDao(): MentalHealthTipDao
-
+    abstract fun journalDao(): JournalDao
+    abstract fun moodDao(): MoodDao
+    abstract fun sleepDao(): SleepDao
+    abstract fun todoDao(): TodoDao
+    abstract fun userProfileDao(): UserProfileDao // Added UserProfileDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /**
+         * Gets the singleton instance of the AppDatabase.
+         *
+         * @param context The application context.
+         * @return The singleton AppDatabase instance.
+         */
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -32,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mindflow_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration() // In a real app, you'd handle migrations properly
                     .build()
                 INSTANCE = instance
                 instance
