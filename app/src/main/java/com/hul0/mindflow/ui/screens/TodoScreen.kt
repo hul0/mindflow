@@ -1,6 +1,11 @@
 package com.hul0.mindflow.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,25 +14,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hul0.mindflow.model.TodoItem
 import com.hul0.mindflow.ui.viewmodel.TodoViewModel
 import com.hul0.mindflow.ui.viewmodel.ViewModelFactory
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +45,21 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel(factory = ViewModelFactory(L
     val todos by viewModel.allTodos.observeAsState(initial = emptyList())
     var text by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
+    var isInputFocused by remember { mutableStateOf(false) }
+    var showSuccessAnimation by remember { mutableStateOf(false) }
+
+    val completedCount = todos.count { it.isCompleted }
+    val totalCount = todos.size
+    val completionPercentage = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+
+    // Celebration animation trigger
+    LaunchedEffect(completedCount) {
+        if (completedCount > 0 && completedCount == totalCount && totalCount > 0) {
+            showSuccessAnimation = true
+            delay(3000)
+            showSuccessAnimation = false
+        }
+    }
 
     val onAddTask = {
         if (text.isNotBlank()) {
@@ -44,86 +69,459 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel(factory = ViewModelFactory(L
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "My Tasks",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = "Complete your goals for today",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(20.dp)
+        ) {
+            // Header with progress
+            HeaderSection(
+                completedCount = completedCount,
+                totalCount = totalCount,
+                completionPercentage = completionPercentage
+            )
 
-        // Input section
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Enhanced input section
+            EnhancedInputSection(
+                text = text,
+                onTextChange = { text = it },
+                onAddTask = onAddTask,
+                isInputFocused = isInputFocused,
+                onFocusChange = { isInputFocused = it }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Quick actions
+            QuickActionsSection(viewModel = viewModel, todos = todos)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Task categories
+            if (todos.isNotEmpty()) {
+                TaskCategoriesSection(
+                    completedCount = completedCount,
+                    pendingCount = totalCount - completedCount
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Enhanced task list
+            EnhancedTaskList(
+                todos = todos,
+                viewModel = viewModel
+            )
+        }
+
+        // Success celebration overlay
+        if (showSuccessAnimation) {
+            CelebrationOverlay()
+        }
+    }
+}
+
+@Composable
+fun HeaderSection(
+    completedCount: Int,
+    totalCount: Int,
+    completionPercentage: Float
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = completionPercentage,
+        animationSpec = tween(1000, easing = EaseOutBounce)
+    )
+
+    Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "My Tasks",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = if (totalCount == 0) "Ready to be productive?"
+                    else if (completedCount == totalCount) "🎉 All tasks completed!"
+                    else "$completedCount of $totalCount completed",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+            }
+
+            // Circular progress indicator
+            if (totalCount > 0) {
+                Box(
+                    modifier = Modifier.size(64.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        progress = animatedProgress,
+                        modifier = Modifier.size(64.dp),
+                        strokeWidth = 6.dp,
+                        color = if (completedCount == totalCount) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    )
+                    Text(
+                        text = "${(animatedProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+        }
+
+        // Motivational progress bar
+        if (totalCount > 0) {
+            Spacer(modifier = Modifier.height(16.dp))
+            LinearProgressIndicator(
+                progress = animatedProgress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = if (completedCount == totalCount) MaterialTheme.colorScheme.tertiary
+                else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun EnhancedInputSection(
+    text: String,
+    onTextChange: (String) -> Unit,
+    onAddTask: () -> Unit,
+    isInputFocused: Boolean,
+    onFocusChange: (Boolean) -> Unit
+) {
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isInputFocused) 8.dp else 2.dp,
+        animationSpec = tween(300)
+    )
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isInputFocused) 1.02f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(animatedScale),
+        elevation = CardDefaults.cardElevation(defaultElevation = animatedElevation),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.AddTask,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = if (isInputFocused) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+
             OutlinedTextField(
                 value = text,
-                onValueChange = { text = it },
-                label = { Text("Add a new task...") },
+                onValueChange = onTextChange,
+                label = { Text("What needs to be done?") },
+                placeholder = { Text("Add a new task...") },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onAddTask() }),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = onAddTask,
-                shape = CircleShape,
-                modifier = Modifier.size(56.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // List of tasks
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(todos, key = { it.id }) { todo ->
-                TodoItemRow(
-                    todo = todo,
-                    onCheckedChange = { isChecked ->
-                        viewModel.update(todo.copy(isCompleted = isChecked))
-                    },
-                    onDelete = { viewModel.delete(todo) }
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Transparent
                 )
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            AnimatedVisibility(
+                visible = text.isNotBlank(),
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                Button(
+                    onClick = onAddTask,
+                    shape = CircleShape,
+                    modifier = Modifier.size(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Task")
+                }
             }
         }
     }
 }
 
 @Composable
-fun TodoItemRow(
+fun QuickActionsSection(viewModel: TodoViewModel, todos: List<TodoItem>) {
+    val hasCompleted = todos.any { it.isCompleted }
+    val hasIncomplete = todos.any { !it.isCompleted }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AnimatedVisibility(
+            visible = hasCompleted,
+            enter = slideInHorizontally() + fadeIn(),
+            exit = slideOutHorizontally() + fadeOut()
+        ) {
+            QuickActionChip(
+                icon = Icons.Default.Delete,
+                text = "Clear Completed",
+                color = MaterialTheme.colorScheme.error,
+                onClick = {
+                    todos.filter { it.isCompleted }.forEach { viewModel.delete(it) }
+                }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = hasIncomplete,
+            enter = slideInHorizontally() + fadeIn(),
+            exit = slideOutHorizontally() + fadeOut()
+        ) {
+            QuickActionChip(
+                icon = Icons.Default.Done,
+                text = "Complete All",
+                color = MaterialTheme.colorScheme.tertiary,
+                onClick = {
+                    todos.filter { !it.isCompleted }.forEach {
+                        viewModel.update(it.copy(isCompleted = true))
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickActionChip(
+    icon: ImageVector,
+    text: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    Card(
+        modifier = Modifier
+            .scale(animatedScale)
+            .clickable {
+                isPressed = true
+                onClick()
+            }
+            .border(
+                1.dp,
+                color.copy(alpha = 0.3f),
+                RoundedCornerShape(20.dp)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(100)
+            isPressed = false
+        }
+    }
+}
+
+@Composable
+fun TaskCategoriesSection(completedCount: Int, pendingCount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        CategoryCard(
+            title = "Pending",
+            count = pendingCount,
+            icon = Icons.Outlined.Schedule,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        CategoryCard(
+            title = "Completed",
+            count = completedCount,
+            icon = Icons.Outlined.CheckCircle,
+            color = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun CategoryCard(
+    title: String,
+    count: Int,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .border(
+                1.dp,
+                color.copy(alpha = 0.2f),
+                RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.05f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+fun EnhancedTaskList(
+    todos: List<TodoItem>,
+    viewModel: TodoViewModel
+) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(todos, key = { it.id }) { todo ->
+            EnhancedTodoItem(
+                todo = todo,
+                onCheckedChange = { isChecked ->
+                    viewModel.update(todo.copy(isCompleted = isChecked))
+                },
+                onDelete = { viewModel.delete(todo) }
+            )
+        }
+
+        if (todos.isEmpty()) {
+            item {
+                EmptyStateCard()
+            }
+        }
+    }
+}
+
+@Composable
+fun EnhancedTodoItem(
     todo: TodoItem,
     onCheckedChange: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    val cardColor = if (todo.isCompleted) {
+        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val borderColor = if (todo.isCompleted) {
+        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(animatedScale)
+            .border(
+                1.dp,
+                borderColor,
+                RoundedCornerShape(16.dp)
+            )
+            .clickable { isPressed = !isPressed },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (todo.isCompleted) 2.dp else 4.dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -131,22 +529,259 @@ fun TodoItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                Checkbox(
-                    checked = todo.isCompleted,
-                    onCheckedChange = onCheckedChange
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = todo.task,
-                    textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else null,
-                    color = if (todo.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Enhanced checkbox
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (todo.isCompleted)
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        else Color.Transparent
+                    ),
+                    modifier = Modifier.border(
+                        2.dp,
+                        if (todo.isCompleted) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        RoundedCornerShape(8.dp)
+                    )
+                ) {
+                    Checkbox(
+                        checked = todo.isCompleted,
+                        onCheckedChange = onCheckedChange,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.tertiary,
+                            uncheckedColor = Color.Transparent,
+                            checkmarkColor = Color.White
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = todo.task,
+                        textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else null,
+                        color = if (todo.isCompleted)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (todo.isCompleted) FontWeight.Normal else FontWeight.Medium
+                    )
+
+                    if (todo.isCompleted) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "Completed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                }
             }
-            IconButton(onClick = onDelete) {
+
+            // Action buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Priority indicator (visual only)
+                if (!todo.isCompleted) {
+                    Card(
+                        shape = CircleShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier
+                            .size(32.dp)
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                CircleShape
+                            )
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.Flag,
+                                contentDescription = "Priority",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Delete button
+                Card(
+                    shape = CircleShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                    ),
+                    modifier = Modifier
+                        .size(32.dp)
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.3f),
+                            CircleShape
+                        )
+                        .clickable { showDeleteDialog = true }
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Task") },
+            text = { Text("Are you sure you want to delete this task?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(200)
+            isPressed = false
+        }
+    }
+}
+
+@Composable
+fun EmptyStateCard() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Outlined.TaskAlt,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No tasks yet",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Add your first task to get started!\nStay organized and productive.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun CelebrationOverlay() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            border = BorderStroke(
+                2.dp,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete Todo",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .rotate(rotation),
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Congratulations!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "All tasks completed! 🎉",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
         }
