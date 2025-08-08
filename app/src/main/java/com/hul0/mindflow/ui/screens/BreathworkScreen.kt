@@ -10,15 +10,16 @@ import android.os.VibratorManager
 import androidx.annotation.RequiresPermission
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -27,20 +28,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hul0.mindflow.ui.viewmodel.BreathworkViewModel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlin.math.*
 
 data class BreathingTechnique(
     val name: String,
@@ -51,7 +48,7 @@ data class BreathingTechnique(
     val action: suspend BreathworkViewModel.() -> kotlinx.coroutines.flow.Flow<Pair<String, String>>
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
     val instruction by viewModel.instruction.collectAsState()
@@ -63,17 +60,17 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
     val context = LocalContext.current
 
     // Animation states
-    val breathingAnimation = rememberInfiniteTransition(label = "breathing")
-    val circleScale by breathingAnimation.animateFloat(
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing_transition")
+    val circleScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (isActive && (instruction.contains("In") || instruction.contains("Hold"))) 1.4f else 1f,
+        targetValue = if (isActive && (instruction.contains("In") || instruction.contains("Tense"))) 1.4f else 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(
                 durationMillis = when {
                     instruction.contains("In") -> 4000
-                    instruction.contains("Hold") -> if (selectedTechnique?.shortName == "4-5-4") 5000 else 4000
+                    instruction.contains("Hold") -> 4000 // Generic hold time
                     instruction.contains("Out") -> 4000
-                    else -> 1000
+                    else -> 2000
                 },
                 easing = EaseInOutCubic
             ),
@@ -82,66 +79,39 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
         label = "circle_scale"
     )
 
-    val colorAnimation by breathingAnimation.animateColor(
-        initialValue = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+    val colorAnimation by animateColorAsState(
         targetValue = when {
-            instruction.contains("In") -> Color(0xFF4CAF50).copy(alpha = 0.8f)
-            instruction.contains("Hold") -> Color(0xFFFF9800).copy(alpha = 0.8f)
-            instruction.contains("Out") -> Color(0xFF2196F3).copy(alpha = 0.8f)
-            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            instruction.contains("In") -> Color(0xFF4CAF50).copy(alpha = 0.8f) // Green for Inhale
+            instruction.contains("Hold") -> Color(0xFFFFC107).copy(alpha = 0.8f) // Amber for Hold
+            instruction.contains("Out") || instruction.contains("Exhale") -> Color(0xFF2196F3).copy(alpha = 0.8f) // Blue for Exhale
+            else -> selectedTechnique?.color?.copy(alpha = 0.5f) ?: MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
         },
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
+        animationSpec = tween(1500, easing = EaseInOutCubic),
         label = "color_animation"
     )
 
-    // Breathing techniques
+    // Breathing techniques list
     val techniques = remember {
         listOf(
-            BreathingTechnique(
-                name = "Box Breathing",
-                shortName = "4-4-4-4",
-                description = "Equal breathing for calm focus",
-                icon = Icons.Default.CropSquare,
-                color = Color(0xFF6366F1)
-            ) { boxBreathing() },
-            BreathingTechnique(
-                name = "Calm Breathing",
-                shortName = "4-5-4",
-                description = "Extended hold for relaxation",
-                icon = Icons.Default.Spa,
-                color = Color(0xFF10B981)
-            ) { fourFiveFourBreathing() },
-            BreathingTechnique(
-                name = "Power Breathing",
-                shortName = "4-7-8",
-                description = "Deep relaxation technique",
-                icon = Icons.Default.FlashOn,
-                color = Color(0xFFF59E0B)
-            ) { powerBreathing() },
-            BreathingTechnique(
-                name = "Wim Hof",
-                shortName = "30-15",
-                description = "Energizing breath method",
-                icon = Icons.Default.Whatshot,
-                color = Color(0xFFEF4444)
-            ) { wimHofBreathing() },
-            BreathingTechnique(
-                name = "Triangle",
-                shortName = "4-4-4",
-                description = "Simple rhythmic breathing",
-                icon = Icons.Default.ChangeHistory,
-                color = Color(0xFF8B5CF6)
-            ) { triangleBreathing() },
-            BreathingTechnique(
-                name = "Coherent",
-                shortName = "5-5",
-                description = "Heart rhythm coherence",
-                icon = Icons.Default.Favorite,
-                color = Color(0xFFEC4899)
-            ) { coherentBreathing() }
+            BreathingTechnique("Box Breathing", "4-4-4-4", "Calm focus", Icons.Default.CropSquare, Color(0xFF6366F1)) { boxBreathing() },
+            BreathingTechnique("Relaxing Breath", "4-7-8", "Aids sleep", Icons.Default.Bedtime, Color(0xFF8B5CF6)) { relaxingBreath478() },
+            BreathingTechnique("Coherent", "5-5", "Balance", Icons.Default.Favorite, Color(0xFFEC4899)) { coherentBreathing() },
+            BreathingTechnique("Wim Hof", "Power", "Energy & focus", Icons.Default.Whatshot, Color(0xFFEF4444)) { wimHofBreathing() },
+            BreathingTechnique("Triangle", "3-3-3", "Simple rhythm", Icons.Default.ChangeHistory, Color(0xFF0EA5E9)) { triangleBreathing() },
+            BreathingTechnique("Pursed Lip", "2-4", "Slows breath", Icons.Default.FilterVintage, Color(0xFF10B981)) { pursedLipBreathing() },
+            BreathingTechnique("Belly Breathing", "4-6", "Deep relaxation", Icons.Default.SelfImprovement, Color(0xFF14B8A6)) { diaphragmaticBreathing() },
+            BreathingTechnique("Alternate Nostril", "Nadi", "Balances mind", Icons.Default.SyncAlt, Color(0xFFF59E0B)) { alternateNostrilBreathing() },
+            BreathingTechnique("Equal Breathing", "6-6", "Calming", Icons.Default.Balance, Color(0xFF65A30D)) { equalBreathing66() },
+            BreathingTechnique("Humming Bee", "Bhramari", "Soothes anxiety", Icons.Default.GraphicEq, Color(0xFFD946EF)) { hummingBeeBreath() },
+            BreathingTechnique("Ocean Breath", "Ujjayi", "Builds energy", Icons.Default.Waves, Color(0xFF0D9488)) { ujjayiBreath() },
+            BreathingTechnique("Kapalabhati", "Cleanse", "Energizing", Icons.Default.Bolt, Color(0xFFF97316)) { kapalabhatiBreathing() },
+            BreathingTechnique("Extended Exhale", "4-8", "Rest & digest", Icons.Default.TrendingDown, Color(0xFF22C55E)) { extendedExhale48() },
+            BreathingTechnique("Buteyko Hold", "Reduce", "Improves O2", Icons.Default.PauseCircle, Color(0xFF78716C)) { buteykoHold() },
+            BreathingTechnique("Cyclic Sighing", "Sigh", "Quickly de-stress", Icons.Default.DoubleArrow, Color(0xFF3B82F6)) { cyclicSighing() },
+            BreathingTechnique("7-11 Breathing", "7-11", "For anxiety", Icons.Default.Thermostat, Color(0xFF84CC16)) { sevenElevenBreathing() },
+            BreathingTechnique("Three-Part Breath", "Dirga", "Full lung use", Icons.Default.StackedLineChart, Color(0xFFF43F5E)) { threePartBreath() },
+            BreathingTechnique("Cooling Breath", "Sitali", "Cools body", Icons.Default.AcUnit, Color(0xFF06B6D4)) { coolingBreathSitali() },
+            BreathingTechnique("Lion's Breath", "Release", "Relieves tension", Icons.Default.SentimentVeryDissatisfied, Color(0xFFEAB308)) { lionsBreath() }
         )
     }
 
@@ -155,11 +125,12 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
             @Suppress("DEPRECATION")
             context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
+        if (!vibrator.hasVibrator()) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val effect = when (type) {
                 "start" -> VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE)
-                "phase" -> VibrationEffect.createOneShot(50, 80)
+                "phase" -> VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30), -1)
                 "stop" -> VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE)
                 else -> VibrationEffect.createOneShot(50, 50)
             }
@@ -168,7 +139,7 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
             @Suppress("DEPRECATION")
             when (type) {
                 "start" -> vibrator.vibrate(100)
-                "phase" -> vibrator.vibrate(50)
+                "phase" -> vibrator.vibrate(longArrayOf(0, 30, 50, 30), -1)
                 "stop" -> vibrator.vibrate(200)
                 else -> vibrator.vibrate(50)
             }
@@ -177,7 +148,7 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
 
     // Track instruction changes for haptic feedback
     LaunchedEffect(instruction) {
-        if (isActive && instruction.isNotEmpty()) {
+        if (isActive && instruction.isNotEmpty() && instruction != "Get Ready...") {
             triggerHaptic("phase")
         }
     }
@@ -197,6 +168,7 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // Make the column scrollable
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -213,8 +185,7 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
                         color = MaterialTheme.colorScheme.primary
                     )
                 )
-
-                if (isActive) {
+                AnimatedVisibility(visible = isActive) {
                     Surface(
                         modifier = Modifier.clip(RoundedCornerShape(20.dp)),
                         color = selectedTechnique?.color?.copy(alpha = 0.1f) ?: Color.Transparent
@@ -224,7 +195,7 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = selectedTechnique?.color ?: Color(0, 0, 0, 255)
+                                color = selectedTechnique?.color ?: Color.Unspecified
                             )
                         )
                     }
@@ -236,145 +207,107 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
             // Breathing Circle Visualization
             Box(
                 modifier = Modifier
-                    .size(280.dp)
-                    .scale(circleScale),
+                    .size(240.dp) // Reduced size to make more space
+                    .scale(if (isActive) circleScale else 1f),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    val center = size.center
-                    val radius = minOf(size.width, size.height) / 2.5f
-
-                    // Outer glow effect
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val radius = size.minDimension / 2.5f
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(
-                                colorAnimation.copy(alpha = 0.4f),
-                                Color.Transparent
-                            ),
+                            colors = listOf(colorAnimation.copy(alpha = 0.4f), Color.Transparent),
                             radius = radius * 1.5f
                         ),
-                        radius = radius * 1.3f,
-                        center = center
+                        radius = radius * 1.3f
                     )
-
-                    // Main circle
                     drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                colorAnimation,
-                                colorAnimation.copy(alpha = 0.2f)
-                            )
-                        ),
-                        radius = radius,
-                        center = center
+                        brush = Brush.radialGradient(colors = listOf(colorAnimation, colorAnimation.copy(alpha = 0.2f))),
+                        radius = radius
                     )
-
-                    // Inner circle
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.1f),
-                        radius = radius * 0.7f,
-                        center = center
-                    )
-
-                    // Progress ring
+                    drawCircle(color = Color.White.copy(alpha = 0.1f), radius = radius * 0.7f)
                     if (isActive) {
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.3f),
-                            radius = radius * 0.9f,
-                            center = center,
-                            style = Stroke(width = 3.dp.toPx())
-                        )
+                        drawCircle(color = Color.White.copy(alpha = 0.3f), radius = radius * 0.9f, style = Stroke(width = 3.dp.toPx()))
                     }
                 }
 
                 // Center content
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedContent(
                         targetState = instruction,
-                        transitionSpec = {
-                            fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                        },
+                        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
                         label = "instruction_animation"
                     ) { targetInstruction ->
                         Text(
                             text = targetInstruction,
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center,
-                                color = Color.White
-                            )
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, color = Color.White)
                         )
                     }
-
-                    if (timer != "Ready?" && timer != "Start") {
+                    if (timer.all { it.isDigit() || it == 's' }) {
                         Spacer(modifier = Modifier.height(8.dp))
                         AnimatedContent(
                             targetState = timer,
-                            transitionSpec = {
-                                (slideInVertically { -it } + fadeIn()) togetherWith
-                                        (slideOutVertically { it } + fadeOut())
-                            },
+                            transitionSpec = { (slideInVertically { -it } + fadeIn()) togetherWith (slideOutVertically { it } + fadeOut()) },
                             label = "timer_animation"
                         ) { targetTimer ->
                             Text(
                                 text = targetTimer,
-                                style = MaterialTheme.typography.displayLarge.copy(
-                                    fontWeight = FontWeight.Light,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
+                                style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Light, color = Color.White.copy(alpha = 0.9f))
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Technique Selection
-            if (!isActive) {
-                Text(
-                    text = "Choose Your Technique",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    ),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(techniques) { technique ->
-                        TechniqueCard(
-                            technique = technique,
-                            isSelected = selectedTechnique == technique,
-                            onClick = {
-                                selectedTechnique = technique
-                                job?.cancel()
-                                isActive = true
-                                triggerHaptic("start")
-                                job = coroutineScope.launch {
-                                    technique.action(viewModel).collect()
+            AnimatedVisibility(
+                visible = !isActive,
+                enter = fadeIn(animationSpec = tween(500)),
+                exit = fadeOut(animationSpec = tween(200))
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Choose Your Technique",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        techniques.forEach { technique ->
+                            TechniqueCard(
+                                technique = technique,
+                                isSelected = selectedTechnique == technique,
+                                onClick = {
+                                    selectedTechnique = technique
+                                    job?.cancel()
+                                    isActive = true
+                                    triggerHaptic("start")
+                                    job = coroutineScope.launch {
+                                        technique.action(viewModel).collect()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Spacer to push button to the bottom if content is short
+            if (!isActive) {
+                Spacer(modifier = Modifier.height(24.dp))
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
 
             // Control Button
             AnimatedContent(
                 targetState = isActive,
-                transitionSpec = {
-                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                },
+                transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
                 label = "button_animation"
             ) { active ->
                 if (active) {
@@ -388,38 +321,19 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFEF4444).copy(alpha = 0.9f)
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.9f)),
                         shape = RoundedCornerShape(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Stop, contentDescription = "Stop Session", modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Stop Session",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium
-                            )
-                        )
+                        Text("Stop Session", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium))
                     }
                 } else {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.Transparent
-                    ) {
-                        Text(
-                            text = "Select a breathing technique to begin",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center
-                            ),
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
-                    }
+                    Text(
+                        text = "Select a breathing technique to begin",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), textAlign = TextAlign.Center),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
                 }
             }
         }
@@ -427,33 +341,29 @@ fun BreathworkScreen(viewModel: BreathworkViewModel = viewModel()) {
 }
 
 @Composable
-fun TechniqueCard(
-    technique: BreathingTechnique,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
+fun TechniqueCard(technique: BreathingTechnique, isSelected: Boolean, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
+    val scale by animateFloatAsState(targetValue = if (isSelected) 1.05f else 1f, label = "card_scale")
 
     Surface(
         modifier = Modifier
-            .width(140.dp)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onClick() },
+            .width(150.dp) // Slightly wider cards for better text fit
+            .height(180.dp) // Fixed height for uniform grid
+            .scale(scale)
+            .clickable(interactionSource = interactionSource, indication = null) { onClick() },
         shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) {
-            technique.color.copy(alpha = 0.15f)
-        } else {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-        },
-        border = if (isSelected) {
-            androidx.compose.foundation.BorderStroke(2.dp, technique.color.copy(alpha = 0.5f))
-        } else null
+        // Use a subtle alpha for the background for a slick, flat look
+        color = if (isSelected) technique.color.copy(alpha = 0.3f) else technique.color.copy(alpha = 0.05f),
+        // Apply a border in both selected and unselected states
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isSelected) technique.color.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Surface(
                 modifier = Modifier.size(48.dp),
@@ -469,35 +379,24 @@ fun TechniqueCard(
                     tint = technique.color
                 )
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Text(
                 text = technique.name,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) technique.color else MaterialTheme.colorScheme.onSurface
-                ),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium, color = if (isSelected) technique.color else MaterialTheme.colorScheme.onSurface),
                 textAlign = TextAlign.Center
             )
-
             Text(
                 text = technique.shortName,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                ),
+                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)),
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(4.dp))
-
             Text(
                 text = technique.description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                ),
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)),
                 textAlign = TextAlign.Center,
-                maxLines = 2
+                maxLines = 2,
+                minLines = 1
             )
         }
     }
