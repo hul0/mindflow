@@ -60,7 +60,7 @@ fun BmiCalculatorScreen(viewModel: BmiViewModel = viewModel()) {
             BmiCategory.Normal -> Color(0xFF22543D)
             BmiCategory.Overweight -> Color(0xFF744210)
             BmiCategory.Obese -> Color(0xFF742A2A)
-            BmiCategory.None -> Color(0xFF2D3748)
+            BmiCategory.None -> Color(0xFF1A1D21)
         },
         animationSpec = tween(1000),
         label = "backgroundGradient"
@@ -106,7 +106,6 @@ fun BmiCalculatorScreen(viewModel: BmiViewModel = viewModel()) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            DynamicHeader(showCelebration = showCelebration)
 
             MotivationalBanner(message = motivationalMessages[motivationIndex])
 
@@ -180,102 +179,49 @@ fun BmiCalculatorScreen(viewModel: BmiViewModel = viewModel()) {
     }
 }
 
-@Composable
-private fun DynamicHeader(showCelebration: Boolean) {
-    val celebrationScale by animateFloatAsState(
-        targetValue = if (showCelebration) 1.05f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "celebrationScale"
-    )
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(celebrationScale),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF667EEA).copy(alpha = 0.8f),
-                            Color(0xFF764BA2).copy(alpha = 0.8f)
-                        )
-                    )
-                )
-                .border(
-                    1.dp,
-                    Color.White.copy(alpha = 0.2f),
-                    RoundedCornerShape(24.dp)
-                )
-                .padding(24.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "✨ MindFlow BMI ✨",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold
-                        ),
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Your journey to a healthier you starts here.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Health Icon",
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun MotivationalBanner(message: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            containerColor = Color(0, 255, 107, 255).copy(alpha = 0.1f)
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.AutoAwesome,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        // AnimatedContent provides a seamless transition when the message text changes.
+        AnimatedContent(
+            targetState = message,
+            transitionSpec = {
+                // Defines a slide-and-fade animation for a polished look.
+                (slideInVertically(animationSpec = tween(400)) { height -> height } + fadeIn(animationSpec = tween(400)))
+                    .togetherWith(slideOutVertically(animationSpec = tween(400)) { height -> -height } + fadeOut(animationSpec = tween(400)))
+            },
+            label = "motivationalMessageAnimation"
+        ) { targetMessage ->
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = targetMessage, // Uses the message from the animation state.
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
-
 @Composable
 private fun EnhancedInputCard(
     height: String,
@@ -309,14 +255,14 @@ private fun EnhancedInputCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Input,
+                    imageVector = Icons.Default.Addchart,
                     contentDescription = null,
                     tint = bmiColor
                 )
                 Text(
                     text = "Your Body Metrics",
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     ),
                     color = bmiColor
                 )
@@ -419,9 +365,9 @@ private fun EnhancedUnitChip(text: String, color: Color) {
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
             color = color,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
         )
     }
 }
@@ -455,9 +401,8 @@ private fun SuperCoolCalculateButton(
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = bmiColor,
-            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        )
     ) {
         AnimatedContent(
             targetState = isCalculating,
@@ -481,7 +426,7 @@ private fun SuperCoolCalculateButton(
                         tint = Color.White
                     )
                     Text(
-                        text = "✨ Calculate BMI ✨",
+                        text = "Calculate BMI",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -535,7 +480,7 @@ private fun EnhancedResultCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "🎯 Your Result",
+                    text = "🎯 Result",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     )
@@ -1109,10 +1054,11 @@ private fun EnhancedSupportText() {
     // ... (This composable can remain as is)
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-        )
+            containerColor = Color(0, 215, 255, 255).copy(alpha = 0.1f)
+        ),
+        border = BorderStroke(1.dp,Color(0, 255, 221, 255).copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
