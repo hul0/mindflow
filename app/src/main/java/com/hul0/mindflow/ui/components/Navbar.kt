@@ -1,7 +1,12 @@
+// app/src/main/java/com/hul0/mindflow/ui/components/BottomNavigationBar.kt
 package com.hul0.mindflow.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -14,9 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,7 +29,6 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.hul0.mindflow.navigation.Screen
 import kotlinx.coroutines.delay
-import kotlin.math.sin
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
@@ -41,73 +43,31 @@ fun BottomNavigationBar(navController: NavController) {
         Screen.Profile
     )
 
-    // Floating animation for the nav bar
-    val infiniteTransition = rememberInfiniteTransition(label = "navFloat")
-    val floatOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "floatOffset"
-    )
-
-    Box(
+    // A single Surface container with the new clean, bordered style.
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
     ) {
-        // Glassmorphism background with subtle animation
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF1A1A2E).copy(alpha = 0.95f + 0.05f * sin(floatOffset * Math.PI).toFloat()),
-                            Color(0xFF16213E).copy(alpha = 0.9f + 0.1f * sin(floatOffset * Math.PI * 0.8).toFloat())
-                        )
-                    )
-                )
-        ) {
-            // Subtle glow effect
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.08f),
-                                Color.Transparent
-                            ),
-                            radius = 200f
-                        )
-                    )
-            )
-        }
-
-        // Navigation items
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
+                .height(72.dp) // Adjusted height
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceAround, // Use SpaceAround for better spacing
             verticalAlignment = Alignment.CenterVertically
         ) {
             bottomNavItems.forEach { screen ->
                 val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-
-                EnhancedNavItem(
+                BottomNavItem(
                     screen = screen,
                     isSelected = isSelected,
                     onClick = {
                         navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -119,7 +79,7 @@ fun BottomNavigationBar(navController: NavController) {
 }
 
 @Composable
-fun EnhancedNavItem(
+fun BottomNavItem(
     screen: Screen,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -127,166 +87,86 @@ fun EnhancedNavItem(
     var isPressed by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
 
-    // Scale animation for press
+    // Simplified scale animation for a subtle press effect.
     val scale by animateFloatAsState(
-        targetValue = when {
-            isPressed -> 0.85f
-            isSelected -> 1.1f
-            else -> 1f
-        },
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        targetValue = if (isPressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
         label = "navItemScale"
     )
 
-    // Color animations
-    val iconColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+    val itemColor by animateColorAsState(
+        targetValue = if (isSelected) getNavItemColor(screen) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "iconColor"
+        label = "itemColor"
     )
 
-    val textColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+    // Animate the background color of the selected item's indicator.
+    val indicatorColor by animateColorAsState(
+        targetValue = if (isSelected) getNavItemColor(screen).copy(alpha = 0.15f) else Color.Transparent,
         animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "textColor"
+        label = "indicatorColor"
     )
 
-    // Background glow for selected item
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 0.3f else 0f,
-        animationSpec = tween(400, easing = FastOutSlowInEasing),
-        label = "glowAlpha"
-    )
-
-    // Floating animation for selected item
-    val infiniteTransition = rememberInfiniteTransition(label = "selectedFloat")
-    val selectedFloat by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (isSelected) 3f else 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "selectedFloat"
-    )
-
-    // Pulse effect for selected icon
-    val iconScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = if (isSelected) 1.15f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "iconScale"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
         modifier = Modifier
+            .size(52.dp)
             .scale(scale)
-            .offset(y = (-selectedFloat).dp)
+            .clip(CircleShape)
+            .background(indicatorColor)
             .selectable(
                 selected = isSelected,
                 interactionSource = interactionSource,
-                indication = null
-            ) {
-                isPressed = true
-                onClick()
-            }
-            .padding(vertical = 8.dp, horizontal = 12.dp)
-    ) {
-        // BUG FIX: Wrap the Icon and its Glow effect in a single Box to layer them.
-        // This prevents the glow from pushing the icon and text down, fixing the layout.
-        Box(contentAlignment = Alignment.Center) {
-            // Glow background for selected item
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    getNavItemColor(screen).copy(alpha = glowAlpha),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                ) {
-                    // Inner glow
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.Center)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.15f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                    )
+                indication = null,
+                onClick = {
+                    isPressed = true
+                    onClick()
                 }
-            }
-
-            // Icon with enhanced effects
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Icon(
                 imageVector = screen.icon,
                 contentDescription = screen.title,
-                modifier = Modifier
-                    .size(26.dp)
-                    .scale(iconScale)
-                    .graphicsLayer {
-                        // Subtle rotation for selected item
-                        rotationZ = if (isSelected) sin(selectedFloat * 0.1f) * 2f else 0f
-                    },
-                tint = iconColor
+                modifier = Modifier.size(22.dp),
+                tint = itemColor
             )
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Enhanced text with better typography
-        Text(
-            text = screen.title,
-            fontSize = if (isSelected) 12.sp else 11.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = textColor,
-            letterSpacing = 0.3.sp
-        )
-
-        // Active indicator dot
-        if (isSelected) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(getNavItemColor(screen))
-                    .scale(iconScale * 0.8f)
+            // Text is now always visible to maintain size consistency.
+            // Its style changes based on the selection state.
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = screen.title,
+                fontSize = 10.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = itemColor,
+                letterSpacing = 0.3.sp,
+                maxLines = 1
             )
         }
     }
 
-    // Reset press state after animation
+    // Reset press state after animation for the click feedback.
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            delay(100)
+            delay(150)
             isPressed = false
         }
     }
 }
 
-// Color mapping for each nav item
+// Helper to provide a unique color for each navigation item's selected state.
 @Composable
 private fun getNavItemColor(screen: Screen): Color {
     return when (screen.route) {
-        "home" -> Color(0xFF74B9FF)
-        "quotes" -> Color(0xFF00CEC9)
-        "mood_tracker" -> Color(0xFF6C5CE7)
-        "meditation" -> Color(0xFFE84393)
-        else -> Color(0xFF74B9FF)
+        "home" -> Color(0xFF3B82F6)
+        "quotes" -> Color(0xFF10B981)
+        "mood_tracker" -> Color(0xFF8B5CF6)
+        "meditation" -> Color(0xFFEC4899)
+        "profile" -> Color(0xFFF59E0B)
+        else -> MaterialTheme.colorScheme.primary
     }
 }
