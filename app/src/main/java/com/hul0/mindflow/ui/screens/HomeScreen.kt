@@ -163,11 +163,16 @@ fun HeaderSection(greeting: String, date: String , day: String , time: LocalTime
                 tint = Color(248, 224, 5, 255).copy(0.7f)
             )
             Spacer(Modifier.width(4.dp))
-            Text("Time : ${time.hour}:${time.minute}",
-                    style = MaterialTheme.typography.titleMedium.copy(
+            // Assuming 'time' is an object like LocalTime with .hour and .minute properties
+            val formattedTime = "%02d:%02d".format(time.hour, time.minute)
+
+            Text(
+                text = "Time : $formattedTime",
+                style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            ))
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            )
         }
         Spacer(modifier = Modifier.height(12.dp))
         Box(
