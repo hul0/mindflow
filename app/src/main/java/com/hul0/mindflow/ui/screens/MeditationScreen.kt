@@ -1,5 +1,6 @@
 package com.hul0.mindflow.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -258,6 +259,7 @@ private fun ScreenHeader() {
     }
 }
 
+@SuppressLint("DefaultLocale")
 @Composable
 private fun ActiveSessionContent(
     session: MeditationSession,
