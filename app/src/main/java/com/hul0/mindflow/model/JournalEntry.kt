@@ -8,5 +8,9 @@ import androidx.room.PrimaryKey
 data class JournalEntry(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val content: String,
-    val date: Long = System.currentTimeMillis()
+    val date: Long = System.currentTimeMillis(),
+    // Added mood, category, and tags
+    val mood: String?,
+    val category: String?,
+    val tags: List<String> = emptyList()
 )

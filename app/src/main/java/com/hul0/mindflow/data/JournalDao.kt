@@ -12,4 +12,8 @@ interface JournalDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJournalEntry(entry: JournalEntry)
+
+    // Added delete function
+    @Delete
+    suspend fun deleteJournalEntry(entry: JournalEntry)
 }

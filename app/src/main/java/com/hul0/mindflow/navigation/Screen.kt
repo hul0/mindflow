@@ -17,4 +17,5 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object BmiCalculator : Screen("bmi_calculator", "BMI", Icons.Default.Calculate)
     object Breathwork : Screen("breathwork", "Breathe", Icons.Default.Spa)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
+    object Chat: Screen("chat", "Chat" , Icons.Default.ChatBubbleOutline)
 }

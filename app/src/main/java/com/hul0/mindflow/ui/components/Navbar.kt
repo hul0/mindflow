@@ -39,7 +39,8 @@ fun BottomNavigationBar(navController: NavController) {
         Screen.Quotes,
         Screen.MoodTracker,
         Screen.Meditation,
-        Screen.Profile
+        Screen.Profile,
+        Screen.Chat
     )
 
     // A Box that provides padding around the navbar.
@@ -171,6 +172,7 @@ private fun getNavItemColor(screen: Screen): Color {
         "home" -> Color(0xFF3B82F6)
         "quotes" -> Color(0xFF10B981)
         "mood_tracker" -> Color(0xFF8B5CF6)
+        "chat" -> Color(0xFFFFA900)
         "meditation" -> Color(0xFFEC4899)
         "profile" -> Color(0xFFF59E0B)
         else -> MaterialTheme.colorScheme.primary

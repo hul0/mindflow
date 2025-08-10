@@ -3,16 +3,19 @@ package com.hul0.mindflow.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -43,8 +46,37 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-// Data class for TodoItem model (assuming this structure)
-// data class TodoItem(val id: Int = 0, val task: String, val isCompleted: Boolean = false)
+// A dedicated object for a more vibrant and consistent color scheme.
+object TodoColors {
+    val Background = Color(0xFF1A1C20)
+    val Surface = Color(0xFF252830)
+    val Primary = Color(0xFF8A5FF7)
+    val Secondary = Color(0xFF33B6E6)
+    val Tertiary = Color(0xFFE91E63)
+    val OnBackground = Color(0xFFEAEAEA)
+    val OnSurface = Color(0xFFD1D1D1)
+    val Completed = Color(0xFF4CAF50) // Green for completed tasks
+    val Error = Color(0xFFF44336)
+
+    val TaskColors = listOf(
+        Primary,
+        Secondary,
+        Tertiary,
+        Color(0xFF03A9F4), // Light Blue
+        Color(0xFFFF9800)  // Orange
+    )
+}
+
+// A more diverse list of icons for the confetti animation.
+private val confettiIcons = listOf(
+    Icons.Default.Star,
+    Icons.Default.Favorite,
+    Icons.Default.CheckCircle,
+    Icons.Default.AutoAwesome,
+    Icons.Default.ThumbUp,
+    Icons.Default.EmojiEvents,
+    Icons.Default.Celebration
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,18 +84,18 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel(factory = ViewModelFactory(L
     val todos by viewModel.allTodos.observeAsState(initial = emptyList())
     var text by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
-    var showSuccessAnimation by remember { mutableStateOf(false) }
+    var showConfetti by remember { mutableStateOf(false) }
 
     val completedCount = todos.count { it.isCompleted }
     val totalCount = todos.size
     val completionPercentage = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
 
-    // Celebration animation trigger
+    // Trigger for the confetti animation.
     LaunchedEffect(completedCount, totalCount) {
         if (totalCount > 0 && completedCount == totalCount) {
-            showSuccessAnimation = true
+            showConfetti = true
             delay(4000) // Let the animation play
-            showSuccessAnimation = false
+            showConfetti = false
         }
     }
 
@@ -79,71 +111,54 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel(factory = ViewModelFactory(L
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(TodoColors.Background)
+                .verticalScroll(rememberScrollState()) // --- UPDATED --- Screen is now scrollable
                 .padding(20.dp)
         ) {
-            // Header with progress
             HeaderSection(
                 completedCount = completedCount,
                 totalCount = totalCount,
                 completionPercentage = completionPercentage
             )
-
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Enhanced input section
             EnhancedInputSection(
                 text = text,
                 onTextChange = { text = it },
                 onAddTask = onAddTask,
             )
-
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Quick actions
-            QuickActionsSection(viewModel = viewModel, todos = todos)
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Task categories
+            // Combine Quick Actions and Categories into one row
             if (todos.isNotEmpty()) {
-                TaskCategoriesSection(
+                ActionsAndCategoriesSection(
+                    viewModel = viewModel,
+                    todos = todos,
                     completedCount = completedCount,
                     pendingCount = totalCount - completedCount
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // Enhanced task list
+            // The list is sorted to place completed items at the bottom.
             EnhancedTaskList(
-                todos = todos,
+                todos = todos.sortedBy { it.isCompleted },
                 viewModel = viewModel
             )
         }
 
-        // Success celebration overlay
-        AnimatedVisibility(
-            visible = showSuccessAnimation,
-            enter = fadeIn(animationSpec = tween(500)),
-            exit = fadeOut(animationSpec = tween(500))
-        ) {
-            CelebrationOverlay()
+        // The celebration overlay is now just the improved confetti.
+        if (showConfetti) {
+            ConfettiCelebration()
         }
     }
 }
 
 @Composable
-fun HeaderSection(
-    completedCount: Int,
-    totalCount: Int,
-    completionPercentage: Float
-) {
+fun HeaderSection(completedCount: Int, totalCount: Int, completionPercentage: Float) {
     val animatedProgress by animateFloatAsState(
         targetValue = completionPercentage,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
-        ), label = "ProgressAnimation"
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "ProgressAnimation"
     )
 
     Column {
@@ -153,41 +168,47 @@ fun HeaderSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Checklist,
+                        contentDescription = "Tasks Icon",
+                        tint = TodoColors.Primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "My Tasks",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = TodoColors.OnBackground
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
                 Text(
-                    text = "My Tasks",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = if (totalCount == 0) "Ready to be productive?"
-                    else if (completedCount == totalCount) "All tasks completed!"
+                    text = if (totalCount == 0) "Ready to be productive? ✨"
+                    else if (completedCount == totalCount) "All tasks completed! 🎉"
                     else "$completedCount of $totalCount completed",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    color = TodoColors.OnBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(start = 36.dp)
                 )
             }
 
             if (totalCount > 0) {
-                Box(
-                    modifier = Modifier.size(64.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         progress = { animatedProgress },
                         modifier = Modifier.size(64.dp),
                         strokeWidth = 6.dp,
-                        color = if (completedCount == totalCount) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        color = if (completedCount == totalCount) TodoColors.Completed else TodoColors.Primary,
+                        trackColor = TodoColors.Primary.copy(alpha = 0.1f)
                     )
                     Text(
                         text = "${(animatedProgress * 100).toInt()}%",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = TodoColors.OnBackground
                     )
                 }
             }
@@ -197,26 +218,17 @@ fun HeaderSection(
             Spacer(modifier = Modifier.height(16.dp))
             LinearProgressIndicator(
                 progress = { animatedProgress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = if (completedCount == totalCount) MaterialTheme.colorScheme.tertiary
-                else MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                color = if (completedCount == totalCount) TodoColors.Completed else TodoColors.Primary,
+                trackColor = TodoColors.Primary.copy(alpha = 0.1f)
             )
         }
     }
 }
 
 @Composable
-fun EnhancedInputSection(
-    text: String,
-    onTextChange: (String) -> Unit,
-    onAddTask: () -> Unit
-) {
+fun EnhancedInputSection(text: String, onTextChange: (String) -> Unit, onAddTask: () -> Unit) {
     var isInputFocused by remember { mutableStateOf(false) }
-
     val animatedScale by animateFloatAsState(
         targetValue = if (isInputFocused) 1.02f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -224,58 +236,49 @@ fun EnhancedInputSection(
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(animatedScale),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        modifier = Modifier.fillMaxWidth().scale(animatedScale),
+        colors = CardDefaults.cardColors(containerColor = TodoColors.Surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, TodoColors.OnSurface.copy(alpha = 0.1f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = text,
                 onValueChange = onTextChange,
-                label = { Text("What needs to be done?") },
-                placeholder = { Text("Add a new task...") },
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { focusState ->
-                        isInputFocused = focusState.isFocused
-                    },
+                label = { Text("What needs to be done?", color = TodoColors.OnSurface.copy(0.7f)) },
+                placeholder = { Text("e.g., Walk the dog", color = TodoColors.OnSurface.copy(0.5f)) },
+                modifier = Modifier.weight(1f).onFocusChanged { focusState -> isInputFocused = focusState.isFocused },
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onAddTask() }),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = TodoColors.Primary,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                )
+                    focusedContainerColor = TodoColors.Surface,
+                    unfocusedContainerColor = TodoColors.Surface,
+                    focusedTextColor = TodoColors.OnBackground,
+                    cursorColor = TodoColors.Primary,
+                    unfocusedTextColor = TodoColors.OnBackground
+                ),
+                leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null, tint = TodoColors.Secondary) }
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // The button is now in a fixed-size Box to prevent resizing the text field
             Box(modifier = Modifier.size(48.dp)) {
-                // --- CHANGE ---
-                // Replaced AnimatedVisibility with a standard `if` condition for stability.
-                // This resolves the implicit receiver error.
-                if (text.isNotBlank()) {
+                if(text.isNotBlank()) {
                     Button(
                         onClick = onAddTask,
                         shape = CircleShape,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(0.dp)
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TodoColors.Primary)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Task")
+                        Icon(Icons.Default.Add, contentDescription = "Add Task", tint = TodoColors.OnBackground)
                     }
                 }
             }
@@ -284,241 +287,151 @@ fun EnhancedInputSection(
 }
 
 @Composable
-fun QuickActionsSection(viewModel: TodoViewModel, todos: List<TodoItem>) {
-    val hasCompleted = todos.any { it.isCompleted }
-
+fun ActionsAndCategoriesSection(
+    viewModel: TodoViewModel,
+    todos: List<TodoItem>,
+    completedCount: Int,
+    pendingCount: Int
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start)
     ) {
-        if (hasCompleted) {
+        InfoChip(
+            icon = Icons.Outlined.Schedule,
+            text = "$pendingCount Pending",
+            color = TodoColors.Secondary
+        )
+        InfoChip(
+            icon = Icons.Outlined.TaskAlt,
+            text = "$completedCount Completed",
+            color = TodoColors.Completed
+        )
+        if (todos.any { it.isCompleted }) {
             QuickActionChip(
                 icon = Icons.Default.DeleteSweep,
-                text = "Clear Completed",
-                color = MaterialTheme.colorScheme.error,
-                onClick = {
-                    todos.filter { it.isCompleted }.forEach { viewModel.delete(it) }
-                }
+                text = "Clear",
+                color = TodoColors.Error,
+                onClick = { todos.filter { it.isCompleted }.forEach { viewModel.delete(it) } }
             )
         }
     }
 }
 
 @Composable
-fun QuickActionChip(
-    icon: ImageVector,
-    text: String,
-    color: Color,
-    onClick: () -> Unit
-) {
-    var isPressed by remember { mutableStateOf(false) }
-
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "ChipScaleAnimation"
-    )
-
+fun QuickActionChip(icon: ImageVector, text: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .scale(animatedScale)
             .clip(RoundedCornerShape(20.dp))
             .background(color.copy(alpha = 0.1f))
-            .border(
-                1.dp,
-                color.copy(alpha = 0.3f),
-                RoundedCornerShape(20.dp)
-            )
-            .clickable {
-                isPressed = true
-                onClick()
-            }
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = color,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-
-    LaunchedEffect(isPressed) {
-        if (isPressed) {
-            delay(100)
-            isPressed = false
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            Text(text = text, style = MaterialTheme.typography.labelMedium, color = color, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @Composable
-fun TaskCategoriesSection(completedCount: Int, pendingCount: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+fun InfoChip(icon: ImageVector, text: String, color: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.1f))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
     ) {
-        CategoryCard(
-            title = "Pending",
-            count = pendingCount,
-            icon = Icons.Outlined.Schedule,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f)
-        )
-        CategoryCard(
-            title = "Completed",
-            count = completedCount,
-            icon = Icons.Outlined.CheckCircle,
-            color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-fun CategoryCard(
-    title: String,
-    count: Int,
-    icon: ImageVector,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.05f)
-        ),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            Text(text = text, style = MaterialTheme.typography.labelMedium, color = color, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EnhancedTaskList(
-    todos: List<TodoItem>,
-    viewModel: TodoViewModel
-) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
-    ) {
-        items(todos, key = { it.id }) { todo ->
+fun EnhancedTaskList(todos: List<TodoItem>, viewModel: TodoViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        todos.forEachIndexed { index, todo ->
             EnhancedTodoItem(
                 todo = todo,
-                onCheckedChange = { isChecked ->
-                    viewModel.update(todo.copy(isCompleted = isChecked))
-                },
+                index = index,
+                onCheckedChange = { isChecked -> viewModel.update(todo.copy(isCompleted = isChecked)) },
                 onDelete = { viewModel.delete(todo) }
             )
         }
-
         if (todos.isEmpty()) {
-            item {
-                EmptyStateCard()
-            }
+            EmptyStateCard()
         }
     }
 }
 
 @Composable
 fun EnhancedTodoItem(
+    modifier: Modifier = Modifier,
     todo: TodoItem,
+    index: Int,
     onCheckedChange: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    val taskColor = TodoColors.TaskColors[index % TodoColors.TaskColors.size]
+
     val cardColor by animateColorAsState(
-        targetValue = if (todo.isCompleted) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
-        else MaterialTheme.colorScheme.surface,
+        targetValue = if (todo.isCompleted) TodoColors.Completed.copy(alpha = 0.15f) else TodoColors.Surface,
         animationSpec = spring(), label = "CardColorAnimation"
     )
-
     val borderColor by animateColorAsState(
-        targetValue = if (todo.isCompleted) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
-        else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+        targetValue = if (todo.isCompleted) TodoColors.Completed.copy(alpha = 0.3f) else taskColor.copy(alpha = 0.2f),
         animationSpec = spring(), label = "BorderColorAnimation"
     )
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(), // --- UPDATED --- Animates size changes smoothly
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         border = BorderStroke(1.dp, borderColor)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Checkbox(
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                RoundCheckbox(
                     checked = todo.isCompleted,
                     onCheckedChange = onCheckedChange,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.tertiary,
-                        uncheckedColor = MaterialTheme.colorScheme.primary,
-                        checkmarkColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    checkedColor = TodoColors.Completed,
+                    uncheckedColor = taskColor
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
                     text = todo.task,
                     textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else null,
-                    color = if (todo.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = if (todo.isCompleted) TodoColors.OnSurface.copy(alpha = 0.6f) else TodoColors.OnSurface,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (todo.isCompleted) FontWeight.Normal else FontWeight.Medium
                 )
             }
-
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(
-                    Icons.Outlined.Delete,
+                    Icons.Outlined.DeleteOutline,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    tint = TodoColors.Error.copy(alpha = 0.7f)
                 )
             }
         }
@@ -527,64 +440,90 @@ fun EnhancedTodoItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Task") },
-            text = { Text("Are you sure you want to delete this task? This action cannot be undone.") },
+            title = { Text("Delete Task", color = TodoColors.OnBackground) },
+            text = { Text("Are you sure you want to delete this task?", color = TodoColors.OnSurface) },
+            containerColor = TodoColors.Surface,
             confirmButton = {
                 Button(
-                    onClick = {
-                        onDelete()
-                        showDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
+                    onClick = { onDelete(); showDeleteDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = TodoColors.Error)
+                ) { Text("Delete", color = TodoColors.OnBackground) }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedButton(
+                    onClick = { showDeleteDialog = false },
+                    border = BorderStroke(1.dp, TodoColors.OnSurface.copy(0.5f))
+                ) { Text("Cancel", color = TodoColors.OnSurface) }
             }
         )
     }
 }
 
 @Composable
+fun RoundCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    checkedColor: Color,
+    uncheckedColor: Color
+) {
+    val color by animateColorAsState(if (checked) checkedColor else Color.Transparent, label = "checkbox_bg_color")
+    val borderColor by animateColorAsState(if (checked) checkedColor else uncheckedColor, label = "checkbox_border_color")
+    val checkmarkColor by animateColorAsState(if (checked) TodoColors.Background else Color.Transparent, label = "checkmark_color")
+
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(color)
+            .border(2.dp, borderColor, CircleShape)
+            .clickable { onCheckedChange(!checked) },
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(
+            visible = checked,
+            enter = scaleIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeIn(),
+            exit = scaleOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeOut()
+        ) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = "Checked",
+                tint = checkmarkColor,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun EmptyStateCard() {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = TodoColors.Primary.copy(alpha = 0.05f)),
+        border = BorderStroke(1.dp, TodoColors.Primary.copy(alpha = 0.1f))
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(40.dp),
+            modifier = Modifier.fillMaxWidth().padding(40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                Icons.Outlined.TaskAlt,
+                Icons.Outlined.AssignmentTurnedIn,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                tint = TodoColors.Primary.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No Tasks Yet",
+                text = "All Clear!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = TodoColors.OnBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Add your first task to get started!",
+                text = "Add a new task to get started.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = TodoColors.OnSurface.copy(alpha = 0.7f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
@@ -592,18 +531,14 @@ fun EmptyStateCard() {
 }
 
 @Composable
-fun CelebrationOverlay() {
-    val particles = remember { List(50) { Particle() } }
+fun ConfettiCelebration() {
+    val particles = remember { List(100) { Particle.create() } }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         particles.forEach { particle ->
             var scale by remember { mutableStateOf(0f) }
             var alpha by remember { mutableStateOf(1f) }
+            val yOffset by remember { mutableStateOf( (Random.nextFloat() * 200 - 100).dp ) }
 
             LaunchedEffect(Unit) {
                 launch {
@@ -611,15 +546,15 @@ fun CelebrationOverlay() {
                     animate(
                         initialValue = 0f,
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+                        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
                     ) { value, _ -> scale = value }
 
-                    delay(1500)
+                    delay(2000)
 
                     animate(
                         initialValue = 1f,
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = 1000)
+                        animationSpec = tween(durationMillis = 1200, easing = FastOutLinearInEasing)
                     ) { value, _ -> alpha = value }
                 }
             }
@@ -629,65 +564,31 @@ fun CelebrationOverlay() {
                 contentDescription = null,
                 tint = particle.color,
                 modifier = Modifier
-                    .offset(x = particle.x, y = particle.y)
+                    .align(Alignment.Center)
+                    .offset(x = particle.x, y = particle.y + yOffset)
                     .scale(scale)
                     .alpha(alpha)
             )
-        }
-
-        var cardScale by remember { mutableStateOf(0.5f) }
-        LaunchedEffect(Unit) {
-            animate(
-                initialValue = 0.5f,
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            ) { value, _ -> cardScale = value }
-        }
-
-        Card(
-            modifier = Modifier.scale(cardScale),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary)
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Filled.Celebration,
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Congratulations!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "You've completed all your tasks!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
-            }
         }
     }
 }
 
 private data class Particle(
-    val x: Dp = Random.nextInt(-200, 200).dp,
-    val y: Dp = Random.nextInt(-400, 400).dp,
-    val color: Color = listOf(
-        Color(0xFFf44336), Color(0xFFe91e63), Color(0xFF9c27b0), Color(0xFF673ab7),
-        Color(0xFF3f51b5), Color(0xFF2196f3), Color(0xFF03a9f4), Color(0xFF00bcd4),
-        Color(0xFF009688), Color(0xFF4caf50), Color(0xFF8bc34a), Color(0xFFcddc39),
-        Color(0xFFffeb3b), Color(0xFFffc107), Color(0xFFff9800), Color(0xFFff5722)
-    ).random(),
-    val icon: ImageVector = listOf(Icons.Default.Star, Icons.Default.Circle, Icons.Default.Favorite).random(),
-    val delay: Long = Random.nextLong(0, 500)
-)
+    val x: Dp,
+    val y: Dp,
+    val color: Color,
+    val icon: ImageVector,
+    val delay: Long
+) {
+    companion object {
+        fun create(): Particle {
+            return Particle(
+                x = Random.nextInt(-250, 250).dp,
+                y = Random.nextInt(-450, 450).dp,
+                color = TodoColors.TaskColors.random().copy(alpha = Random.nextFloat().coerceIn(0.5f, 1.0f)),
+                icon = confettiIcons.random(),
+                delay = Random.nextLong(0, 700)
+            )
+        }
+    }
+}

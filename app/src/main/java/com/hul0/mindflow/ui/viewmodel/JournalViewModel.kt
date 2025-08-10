@@ -1,4 +1,3 @@
-
 // app/src/main/java/com/hul0/mindflow/ui/viewmodel/JournalViewModel.kt
 package com.hul0.mindflow.ui.viewmodel
 
@@ -13,7 +12,13 @@ import kotlinx.coroutines.launch
 class JournalViewModel(private val repository: JournalRepository) : ViewModel() {
     val allJournalEntries: LiveData<List<JournalEntry>> = repository.allJournalEntries.asLiveData()
 
+    // Updated insert to include new fields
     fun insert(entry: JournalEntry) = viewModelScope.launch {
         repository.insert(entry)
+    }
+
+    // Added delete function
+    fun delete(entry: JournalEntry) = viewModelScope.launch {
+        repository.delete(entry)
     }
 }

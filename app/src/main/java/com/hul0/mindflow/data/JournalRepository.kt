@@ -1,4 +1,3 @@
-
 // app/src/main/java/com/hul0/mindflow/data/JournalRepository.kt
 package com.hul0.mindflow.data
 
@@ -10,5 +9,10 @@ class JournalRepository(private val journalDao: JournalDao) {
 
     suspend fun insert(entry: JournalEntry) {
         journalDao.insertJournalEntry(entry)
+    }
+
+    // Added delete function
+    suspend fun delete(entry: JournalEntry) {
+        journalDao.deleteJournalEntry(entry)
     }
 }
