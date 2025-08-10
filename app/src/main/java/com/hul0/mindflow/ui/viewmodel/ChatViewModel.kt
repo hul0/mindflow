@@ -58,7 +58,7 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
         viewModelScope.launch {
             repository.sendMessage(roomId, message, true)
             _isLoading.value = true
-            // Add your OpenRouter API Key here. It's recommended to store it securely.
+            // Add your OpenRouter API Key here. It's recommended to store it.
             val apiKey = "sk-or-v1-6eb50b6b8113ecec1b2e8b96fa6d4ad4ea64cf3a202961e1cd942b45d914587"
             val history = messages.value
             val aiResponse = repository.getAIResponse(apiKey, history)
