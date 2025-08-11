@@ -8,7 +8,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hul0.mindflow.model.UserProfile
+import com.hul0.mindflow.showNotification
 import com.hul0.mindflow.ui.viewmodel.ProfileViewModel
 import com.hul0.mindflow.ui.viewmodel.ViewModelFactory
 import java.text.SimpleDateFormat
@@ -141,6 +141,12 @@ fun ProfileScreen() {
         }
     }
 
+    val onSave = {
+        profileViewModel.saveProfile()
+        showNotification(context, "Profile Saved", "Your profile has been saved successfully!")
+        Toast.makeText(context, "Profile Saved! 🎉", Toast.LENGTH_SHORT).show()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -149,11 +155,11 @@ fun ProfileScreen() {
                     Icon(
                         Icons.Filled.Person,
                         contentDescription = "Profile",
-                        modifier = Modifier.padding(start = 1.dp)
+                        modifier = Modifier.padding(start = 1.dp) // Restored original padding
                     )
                 },
                 actions = {
-                    // Ravishing Import Button
+                    // Import Button
                     Box(
                         modifier = Modifier
                             .size(56.dp)
@@ -197,8 +203,8 @@ fun ProfileScreen() {
                             )
                         }
                     }
-Spacer(modifier = Modifier.padding( 5.dp))
-// Astonishing Export Button
+                    Spacer(modifier = Modifier.padding(5.dp))
+                    // Export Button
                     Box(
                         modifier = Modifier
                             .size(56.dp)
@@ -242,19 +248,55 @@ Spacer(modifier = Modifier.padding( 5.dp))
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.padding(5.dp))
+                    // Save Button
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        ProfileColors.Personal.copy(alpha = 0.1f),
+                                        ProfileColors.Personal.copy(alpha = 0.05f)
+                                    )
+                                )
+                            )
+                            .border(
+                                width = 1.5.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        ProfileColors.Personal.copy(alpha = 0.4f),
+                                        ProfileColors.Personal.copy(alpha = 0.3f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable(onClick = onSave),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Save,
+                                contentDescription = "Save Profile",
+                                modifier = Modifier.size(24.dp),
+                                tint = ProfileColors.Personal
+                            )
+                            Text(
+                                "Save",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = ProfileColors.Personal.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
                 )
-            )
-        },
-        bottomBar = {
-            // --- UI TWEAK: Simplified bottom bar to only contain the Save button ---
-            ActionButtons(
-                onSave = {
-                    profileViewModel.saveProfile()
-                    Toast.makeText(context, "Profile Saved! 🎉", Toast.LENGTH_SHORT).show()
-                }
             )
         }
     ) { paddingValues ->
@@ -264,6 +306,7 @@ Spacer(modifier = Modifier.padding( 5.dp))
                     .padding(paddingValues)
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface)
+                    .verticalScroll(rememberScrollState())
             ) {
                 CategorySelector(
                     selectedCategory = selectedCategory,
@@ -277,27 +320,28 @@ Spacer(modifier = Modifier.padding( 5.dp))
                     },
                     label = "category_transition"
                 ) { category ->
-                    LazyColumn(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp), // UI Tweak: Reduced padding
-                        contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp) // UI Tweak: Reduced padding
+                            .padding(horizontal = 16.dp),
                     ) {
-                        item {
-                            ProfileFormByCategory(
-                                profile = userProfile,
-                                category = category,
-                                onProfileChange = { property, value ->
-                                    profileViewModel.onProfileChange(property, value)
-                                }
-                            )
-                        }
+                        ProfileFormByCategory(
+                            profile = userProfile,
+                            category = category,
+                            onProfileChange = { property, value ->
+                                profileViewModel.onProfileChange(property, value)
+                            }
+                        )
+                        // Added spacer at the bottom
+                        Spacer(Modifier.height(50.dp))
                     }
                 }
             }
         } ?: run {
             Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -316,9 +360,9 @@ fun CategorySelector(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp), // UI Tweak: Reduced padding
-        horizontalArrangement = Arrangement.spacedBy(8.dp), // UI Tweak: Reduced spacing
-        contentPadding = PaddingValues(horizontal = 16.dp) // UI Tweak: Reduced padding
+            .padding(vertical = 12.dp), // Restored original padding
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         items(ProfileCategory.values()) { category ->
             CategoryPill(
@@ -338,7 +382,7 @@ fun CategoryPill(category: ProfileCategory, isSelected: Boolean, onClick: () -> 
     Button(
         onClick = onClick,
         modifier = Modifier.scale(scale),
-        shape = RoundedCornerShape(16.dp), // UI Tweak: Smaller corner radius
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isSelected) category.color.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
             contentColor = color
@@ -347,10 +391,10 @@ fun CategoryPill(category: ProfileCategory, isSelected: Boolean, onClick: () -> 
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp) // UI Tweak: Reduced spacing
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(category.icon, contentDescription = null, modifier = Modifier.size(16.dp)) // UI Tweak: Smaller icon
-            Text(category.displayName, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp) // UI Tweak: Smaller font
+            Icon(category.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+            Text(category.displayName, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
         }
     }
 }
@@ -363,19 +407,19 @@ fun ProfileFormByCategory(
 ) {
     val fields = getFieldsByCategory(category)
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { // UI Tweak: Reduced spacing
-        // Category Header
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { // UI Tweak: Reduced spacing
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
-                modifier = Modifier.size(36.dp).background(category.color.copy(alpha = 0.1f), CircleShape), // UI Tweak: Smaller box
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(category.color.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(category.icon, contentDescription = null, tint = category.color, modifier = Modifier.size(20.dp)) // UI Tweak: Smaller icon
+                Icon(category.icon, contentDescription = null, tint = category.color, modifier = Modifier.size(20.dp))
             }
             Text(category.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
 
-        // Render fields based on their type
         fields.forEach { field ->
             when (field) {
                 is FormField.Text -> EnhancedProfileTextField(
@@ -435,10 +479,10 @@ fun EnhancedProfileTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(label, fontSize = 14.sp) }, // UI Tweak: Smaller font
-        leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } }, // UI Tweak: Smaller icon
+        label = { Text(label, fontSize = 14.sp) },
+        leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } },
         singleLine = singleLine,
-        shape = RoundedCornerShape(10.dp), // UI Tweak: Smaller corner radius
+        shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = themeColor,
             focusedLabelColor = themeColor,
@@ -466,11 +510,13 @@ fun DropdownField(
             value = selectedValue,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label, fontSize = 14.sp) }, // UI Tweak: Smaller font
-            leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } }, // UI Tweak: Smaller icon
+            label = { Text(label, fontSize = 14.sp) },
+            leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(),
-            shape = RoundedCornerShape(10.dp), // UI Tweak: Smaller corner radius
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            shape = RoundedCornerShape(10.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = themeColor,
                 focusedLabelColor = themeColor,
@@ -505,9 +551,9 @@ fun SliderField(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp)) // UI Tweak: Smaller corner radius
+            .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 12.dp, vertical = 6.dp) // UI Tweak: Reduced padding
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -515,8 +561,8 @@ fun SliderField(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                icon?.let { Icon(it, contentDescription = null, tint = themeColor, modifier = Modifier.size(18.dp)) } // UI Tweak: Smaller icon
-                Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) // UI Tweak: Smaller font
+                icon?.let { Icon(it, contentDescription = null, tint = themeColor, modifier = Modifier.size(18.dp)) }
+                Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
             Text("${value.roundToInt()} $unit", fontWeight = FontWeight.Bold, color = themeColor)
         }
@@ -533,17 +579,14 @@ fun SliderField(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateField(label: String, value: String, onDateSelected: (String) -> Unit, icon: ImageVector?, themeColor: Color) {
-    // --- FIX: Revamped Date Picker logic ---
     var showDatePicker by remember { mutableStateOf(false) }
     val formatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.US) }
 
-    // This will open the date picker
     if (showDatePicker) {
         val initialDateMillis = remember(value) {
             try {
                 formatter.parse(value)?.time
             } catch (e: Exception) {
-                // If parsing fails (e.g., empty string), default to today
                 System.currentTimeMillis()
             }
         }
@@ -555,7 +598,6 @@ fun DateField(label: String, value: String, onDateSelected: (String) -> Unit, ic
                 Button(onClick = {
                     datePickerState.selectedDateMillis?.let {
                         val selectedDate = Date(it)
-                        // The formatter needs to account for the local timezone when formatting from UTC millis
                         val displayFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                         onDateSelected(displayFormatter.format(selectedDate))
                     }
@@ -570,17 +612,16 @@ fun DateField(label: String, value: String, onDateSelected: (String) -> Unit, ic
         }
     }
 
-    // This is the text field that shows the date and triggers the picker
     OutlinedTextField(
         value = value,
         onValueChange = {},
         readOnly = true,
-        label = { Text(label, fontSize = 14.sp) }, // UI Tweak: Smaller font
-        leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } }, // UI Tweak: Smaller icon
+        label = { Text(label, fontSize = 14.sp) },
+        leadingIcon = icon?.let { { Icon(it, contentDescription = null, Modifier.size(18.dp)) } },
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDatePicker = true }, // Click to show dialog
-        shape = RoundedCornerShape(10.dp), // UI Tweak: Smaller corner radius
+            .clickable { showDatePicker = true },
+        shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = themeColor,
             focusedLabelColor = themeColor,
@@ -601,13 +642,13 @@ fun RadioGroupField(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp)) // UI Tweak: Smaller corner radius
+            .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 12.dp, vertical = 8.dp) // UI Tweak: Reduced padding
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            icon?.let { Icon(it, contentDescription = null, tint = themeColor, modifier = Modifier.size(18.dp)) } // UI Tweak: Smaller icon
-            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) // UI Tweak: Smaller font
+            icon?.let { Icon(it, contentDescription = null, tint = themeColor, modifier = Modifier.size(18.dp)) }
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
         Spacer(Modifier.height(8.dp))
         Row(
@@ -633,52 +674,15 @@ fun RadioGroupField(
                     colors = buttonColors,
                     border = if (!isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 8.dp) // UI Tweak: Reduced padding
+                    contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    Text(option, fontSize = 13.sp) // UI Tweak: Smaller font
+                    Text(option, fontSize = 13.sp)
                 }
             }
         }
     }
 }
 
-
-// --- BOTTOM ACTION BUTTONS ---
-
-@Composable
-fun ActionButtons(onSave: () -> Unit) {
-    // --- UI TWEAK: Removed Import/Export buttons from this component ---
-    Surface(
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), // UI Tweak: Reduced padding
-        ) {
-            Button(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth().height(48.dp), // UI Tweak: Reduced height
-                shape = RoundedCornerShape(14.dp), // UI Tweak: Smaller corner radius
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp, pressedElevation = 3.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(
-                        brush = Brush.linearGradient(listOf(ProfileColors.Personal, ProfileColors.Personal.copy(alpha = 0.7f))),
-                        shape = RoundedCornerShape(14.dp) // UI Tweak: Smaller corner radius
-                    ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Filled.CheckCircle, contentDescription = "Save")
-                        Text("Save All Changes", fontSize = 15.sp, fontWeight = FontWeight.SemiBold) // UI Tweak: Smaller font
-                    }
-                }
-            }
-        }
-    }
-}
 
 // --- DATA MAPPING FUNCTION ---
 // (No changes were made to this function)

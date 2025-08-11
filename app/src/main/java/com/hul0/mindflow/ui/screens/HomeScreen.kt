@@ -160,7 +160,7 @@ fun HeaderSection(greeting: String, date: String , day: String , time: LocalTime
             Icon(
                 Icons.Default.AccessTime,
                 contentDescription = "time",
-                tint = Color(248, 224, 5, 255).copy(0.7f)
+                tint = MaterialTheme.colorScheme.primary.copy(0.8f) //Color(248, 224, 5, 255).copy(0.7f)
             )
             Spacer(Modifier.width(4.dp))
             // Assuming 'time' is an object like LocalTime with .hour and .minute properties

@@ -1,72 +1,86 @@
-// app/src/main/java/com/hul0/mindflow/MindFlowApp.kt
 package com.hul0.mindflow
 
 import android.app.Application
 import com.hul0.mindflow.data.*
 import com.hul0.mindflow.model.FunFact
 import com.hul0.mindflow.model.MentalHealthTip
+// Make sure to import your Retrofit client and ApiService
+import com.hul0.mindflow.data.network.RetrofitClient
+import com.hul0.mindflow.ui.viewmodel.NotificationViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.io.IOException
 
-/**
- * The Application class for MindFlow.
- * This is the entry point of the app process and is a great place
- * for one-time initializations.
- */
 class MindFlowApp : Application() {
 
-    // A custom coroutine scope for application-level tasks.
     private val applicationScope = CoroutineScope(Dispatchers.IO)
+
+    // You no longer need a separate OkHttpClient instance here
+    // private val client = OkHttpClient()
 
     override fun onCreate() {
         super.onCreate()
-        // Launch a coroutine to prepopulate the database on first launch.
         delayedInit()
+        val notificationViewModel = NotificationViewModel(this)
+        notificationViewModel.createNotificationChannel()
+        notificationViewModel.scheduleNotifications()
     }
 
     private fun delayedInit() {
         applicationScope.launch {
-            // Get database instance
             val database = AppDatabase.getDatabase(this@MindFlowApp)
-
-            // Initialize repositories
             val quotesRepository = QuotesRepository(database.quoteDao())
-            val funFactRepository = FunFactRepository(database.funFactDao())
-            val mentalHealthTipRepository = MentalHealthTipRepository(database.mentalHealthTipDao())
 
             // Pre-populate quotes if the table is empty
             if (quotesRepository.getAllQuotes().firstOrNull().isNullOrEmpty()) {
                 quotesRepository.insertInitialQuotes(QuotesRepository.getInitialQuotes())
             }
 
-            // Pre-populate fun facts if the table is empty
+            // Pre-populate fun facts from a CSV using Retrofit
             if (database.funFactDao().getAllFunFacts().firstOrNull().isNullOrEmpty()) {
-                val facts = listOf(
-                    FunFact(1, "Honey never spoils."),
-                    FunFact(2, "A group of flamingos is called a 'flamboyance'."),
-                    FunFact(3, "The unicorn is the national animal of Scotland."),
-                    FunFact(4, "Octopuses have three hearts."),
-                    FunFact(5, "Bananas are berries, but strawberries aren't.")
-                )
-                database.funFactDao().insertAll(facts)
+                val factsUrl = "https://raw.githubusercontent.com/hul0/dataflow/refs/heads/main/facts.csv"
+                val facts = fetchAndParseCsv(factsUrl) { id, text -> FunFact(id, text) }
+                if (facts.isNotEmpty()) {
+                    database.funFactDao().insertAll(facts)
+                }
             }
 
-            // Pre-populate mental health tips if the table is empty
+            // Pre-populate mental health tips from a CSV using Retrofit
             if (database.mentalHealthTipDao().getAllMentalHealthTips().firstOrNull().isNullOrEmpty()) {
-                val tips = listOf(
-                    MentalHealthTip(
-                        1,
-                        "Take 5 deep breaths, in through your nose and out through your mouth."
-                    ),
-                    MentalHealthTip(2, "Write down 3 things you are grateful for today."),
-                    MentalHealthTip(3, "Go for a 10-minute walk outside."),
-                    MentalHealthTip(4, "Disconnect from social media for an hour."),
-                    MentalHealthTip(5, "Listen to a calming song.")
-                )
-                database.mentalHealthTipDao().insertAll(tips)
+                val tipsUrl = "https://raw.githubusercontent.com/hul0/dataflow/refs/heads/main/tasks.csv"
+                val tips = fetchAndParseCsv(tipsUrl) { id, text -> MentalHealthTip(id, text) }
+                if (tips.isNotEmpty()) {
+                    database.mentalHealthTipDao().insertAll(tips)
+                }
             }
+        }
+    }
+
+    /**
+     * Fetches a CSV file using Retrofit and parses it into a list of data objects.
+     */
+    private suspend fun <T> fetchAndParseCsv(url: String, factory: (id: Int, text: String) -> T): List<T> {
+        return try {
+            val response = RetrofitClient.apiService.downloadFile(url)
+            if (response.isSuccessful) {
+                val responseBody = response.body()?.string()
+                responseBody?.lines()
+                    ?.filter { it.isNotBlank() }
+                    ?.mapIndexed { index, line -> factory(index + 1, line.trim()) }
+                    ?: emptyList()
+            } else {
+                // Log error for unsuccessful response
+                println("Network request failed: ${response.errorBody()?.string()}")
+                emptyList()
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
 }

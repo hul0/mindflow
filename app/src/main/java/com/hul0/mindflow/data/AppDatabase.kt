@@ -20,7 +20,7 @@ import com.hul0.mindflow.model.*
     MentalHealthTip::class,
     ChatRoom::class,
     ChatMessage::class
-], version = 5)
+], version = 6) // Updated version
 @TypeConverters(Converters::class) // Added TypeConverters for the List<String>
 abstract class AppDatabase : RoomDatabase() {
     abstract fun journalDao(): JournalDao

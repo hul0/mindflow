@@ -48,13 +48,11 @@ import kotlin.random.Random
 
 // A dedicated object for a more vibrant and consistent color scheme.
 object TodoColors {
-    val Background = Color(0xFF1A1C20)
-    val Surface = Color(0xFF252830)
+
     val Primary = Color(0xFF8A5FF7)
     val Secondary = Color(0xFF33B6E6)
     val Tertiary = Color(0xFFE91E63)
-    val OnBackground = Color(0xFFEAEAEA)
-    val OnSurface = Color(0xFFD1D1D1)
+
     val Completed = Color(0xFF4CAF50) // Green for completed tasks
     val Error = Color(0xFFF44336)
 
@@ -111,7 +109,7 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel(factory = ViewModelFactory(L
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(TodoColors.Background)
+                .background(MaterialTheme.colorScheme.surface)
                 .verticalScroll(rememberScrollState()) // --- UPDATED --- Screen is now scrollable
                 .padding(20.dp)
         ) {
@@ -179,7 +177,7 @@ fun HeaderSection(completedCount: Int, totalCount: Int, completionPercentage: Fl
                     Text(
                         text = "My Tasks",
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = TodoColors.OnBackground
+                        color =  MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -190,7 +188,7 @@ fun HeaderSection(completedCount: Int, totalCount: Int, completionPercentage: Fl
                     else if (completedCount == totalCount) "All tasks completed! 🎉"
                     else "$completedCount of $totalCount completed",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TodoColors.OnBackground.copy(alpha = 0.7f),
+                    color =  MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     modifier = Modifier.padding(start = 36.dp)
                 )
             }
@@ -208,7 +206,7 @@ fun HeaderSection(completedCount: Int, totalCount: Int, completionPercentage: Fl
                         text = "${(animatedProgress * 100).toInt()}%",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TodoColors.OnBackground
+                        color =  MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -237,9 +235,9 @@ fun EnhancedInputSection(text: String, onTextChange: (String) -> Unit, onAddTask
 
     Card(
         modifier = Modifier.fillMaxWidth().scale(animatedScale),
-        colors = CardDefaults.cardColors(containerColor = TodoColors.Surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, TodoColors.OnSurface.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp,  MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
@@ -248,8 +246,8 @@ fun EnhancedInputSection(text: String, onTextChange: (String) -> Unit, onAddTask
             OutlinedTextField(
                 value = text,
                 onValueChange = onTextChange,
-                label = { Text("What needs to be done?", color = TodoColors.OnSurface.copy(0.7f)) },
-                placeholder = { Text("e.g., Walk the dog", color = TodoColors.OnSurface.copy(0.5f)) },
+                label = { Text("What needs to be done?", color =  MaterialTheme.colorScheme.onSurface.copy(0.7f)) },
+                placeholder = { Text("e.g., Walk the dog", color =  MaterialTheme.colorScheme.onSurface.copy(0.5f)) },
                 modifier = Modifier.weight(1f).onFocusChanged { focusState -> isInputFocused = focusState.isFocused },
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
@@ -258,11 +256,11 @@ fun EnhancedInputSection(text: String, onTextChange: (String) -> Unit, onAddTask
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TodoColors.Primary,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = TodoColors.Surface,
-                    unfocusedContainerColor = TodoColors.Surface,
-                    focusedTextColor = TodoColors.OnBackground,
+                    focusedContainerColor =  MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor =  MaterialTheme.colorScheme.surface,
+                    focusedTextColor =  MaterialTheme.colorScheme.primary,
                     cursorColor = TodoColors.Primary,
-                    unfocusedTextColor = TodoColors.OnBackground
+                    unfocusedTextColor = MaterialTheme.colorScheme.primary
                 ),
                 leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null, tint = TodoColors.Secondary) }
             )
@@ -278,7 +276,7 @@ fun EnhancedInputSection(text: String, onTextChange: (String) -> Unit, onAddTask
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = TodoColors.Primary)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Task", tint = TodoColors.OnBackground)
+                        Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -388,7 +386,7 @@ fun EnhancedTodoItem(
     val taskColor = TodoColors.TaskColors[index % TodoColors.TaskColors.size]
 
     val cardColor by animateColorAsState(
-        targetValue = if (todo.isCompleted) TodoColors.Completed.copy(alpha = 0.15f) else TodoColors.Surface,
+        targetValue = if (todo.isCompleted) TodoColors.Completed.copy(alpha = 0.15f) else  MaterialTheme.colorScheme.surface,
         animationSpec = spring(), label = "CardColorAnimation"
     )
     val borderColor by animateColorAsState(
@@ -422,7 +420,7 @@ fun EnhancedTodoItem(
                 Text(
                     text = todo.task,
                     textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else null,
-                    color = if (todo.isCompleted) TodoColors.OnSurface.copy(alpha = 0.6f) else TodoColors.OnSurface,
+                    color = if (todo.isCompleted)  MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (todo.isCompleted) FontWeight.Normal else FontWeight.Medium
                 )
@@ -440,20 +438,20 @@ fun EnhancedTodoItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Task", color = TodoColors.OnBackground) },
-            text = { Text("Are you sure you want to delete this task?", color = TodoColors.OnSurface) },
-            containerColor = TodoColors.Surface,
+            title = { Text("Delete Task", color =  MaterialTheme.colorScheme.primary) },
+            text = { Text("Are you sure you want to delete this task?", color =  MaterialTheme.colorScheme.onSurface) },
+            containerColor =  MaterialTheme.colorScheme.surface,
             confirmButton = {
                 Button(
                     onClick = { onDelete(); showDeleteDialog = false },
                     colors = ButtonDefaults.buttonColors(containerColor = TodoColors.Error)
-                ) { Text("Delete", color = TodoColors.OnBackground) }
+                ) { Text("Delete", color =  MaterialTheme.colorScheme.onPrimary) }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = { showDeleteDialog = false },
-                    border = BorderStroke(1.dp, TodoColors.OnSurface.copy(0.5f))
-                ) { Text("Cancel", color = TodoColors.OnSurface) }
+                    border = BorderStroke(1.dp,  MaterialTheme.colorScheme.primary.copy(0.5f))
+                ) { Text("Cancel", color =  MaterialTheme.colorScheme.onSurface) }
             }
         )
     }
@@ -468,7 +466,7 @@ fun RoundCheckbox(
 ) {
     val color by animateColorAsState(if (checked) checkedColor else Color.Transparent, label = "checkbox_bg_color")
     val borderColor by animateColorAsState(if (checked) checkedColor else uncheckedColor, label = "checkbox_border_color")
-    val checkmarkColor by animateColorAsState(if (checked) TodoColors.Background else Color.Transparent, label = "checkmark_color")
+    val checkmarkColor by animateColorAsState(if (checked)  MaterialTheme.colorScheme.primary else Color.Transparent, label = "checkmark_color")
 
     Box(
         modifier = Modifier
@@ -517,13 +515,13 @@ fun EmptyStateCard() {
                 text = "All Clear!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = TodoColors.OnBackground
+                color =  MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Add a new task to get started.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TodoColors.OnSurface.copy(alpha = 0.7f),
+                color =  MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
